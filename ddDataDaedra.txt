@@ -26,4 +26,5 @@ Lib\LibAddonMenu-2.0\controls\header.lua
 Lib\LibAddonMenu-2.0\controls\slider.lua
 Lib\LibAddonMenu-2.0\controls\texture.lua
 
+i18n\$(language).lua
 ddDataDaedra.lua

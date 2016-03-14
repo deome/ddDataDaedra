@@ -216,7 +216,65 @@ end
 -----------------------------------------   Arcana   ---------------------------------------------
 --------------------------------------------------------------------------------------------------
 
+function ddDataDaedra:DisplayMsg(msgString, boolDebug)												
+--	local tDebug = self.DataCairn.Codex.cDebug.getFunc()											
+--	local tNotify = self.DataCairn.Codex.cNotify.getFunc()											
+	
+--	if tDebug and 
+--	boolDebug then
+--		d(GetString(DD_DEBUG) .. msgString)																	
+
+--	elseif tNotify and
+--	not boolDebug then
+--		d(GetString(DD_MONIKER) .. msgString)
+		zo_callLater(function() d(GetString(DD_MONIKER) .. msgString) end, 1000)
+		
+--	else
+--		return
+--	end
+end
+
+function ddDataDaedra:hooks()
+--	ZO_PreHook(TRADING_HOUSE, "PostPendingItem", function() self:SavePrice() end)
+--	ZO_PreHook("ZO_InventorySlot_ShowContextMenu", function(rowControl) SlotControl = rowControl; self:SlotControlStatsToChat() end)
+	
+--	ZO_PreHookHandler(ItemTooltip, 	'OnUpdate',		function(tooltip) self:SigilDesign(tooltip) end)
+--	ZO_PreHookHandler(ItemTooltip, 	'OnCleared',	function() TooltipControl = nil end)
+--	ZO_PreHookHandler(PopupTooltip, 'OnUpdate',		function(tooltip) self:InscribePopupSigilstone(tooltip) end)
+--	ZO_PreHookHandler(PopupTooltip,	'OnCleared',	function() PopupControl = nil end)
+	
+--	if self.DataCairn.Codex.cMatMiser.getFunc() then
+--		ZO_PreHookHandler(ZO_SmithingTopLevelCreationPanelResultTooltip, "OnUpdate", function(tooltip) self:CreationSigil(self, tooltip) end)
+--		ZO_PreHookHandler(ZO_SmithingTopLevelCreationPanelResultTooltip, "OnCleared", function() ResultControl = nil end)
+		
+--		ZO_PreHookHandler(ZO_SmithingTopLevelImprovementPanelResultTooltip, "OnUpdate", function(tooltip) self:ImprovementSigil(self, tooltip) end)
+--		ZO_PreHookHandler(ZO_SmithingTopLevelImprovementPanelResultTooltip, "OnCleared", function() ResultControl = nil end)
+		
+--		ZO_PreHookHandler(ZO_EnchantingTopLevelTooltip, "OnUpdate", function(tooltip) self:EnchantingSigil(self, tooltip) end)
+--		ZO_PreHookHandler(ZO_EnchantingTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
+		
+--		ZO_PreHookHandler(ZO_ProvisionerTopLevelTooltip, "OnUpdate", function(tooltip) self:ProvisionerSigil(self, tooltip) end)
+--		ZO_PreHookHandler(ZO_ProvisionerTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
+		
+--		ZO_PreHookHandler(ZO_AlchemyTopLevelTooltip, "OnUpdate", function(tooltip) self:AlchemySigil(self, tooltip) end)
+--		ZO_PreHookHandler(ZO_AlchemyTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
+--	end
+	
+--	ZO_LinkHandler_OnLinkMouseUp = function(itemLink, button, control) self:ChatLinkStatsToChat(itemLink, button, control) end
+--	LINK_HANDLER:RegisterCallback(LINK_HANDLER.LINK_CLICKED_EVENT, function() self:InscribePopupSigilstone(self, PopupTooltip) end)	
+--	SMITHING.improvementPanel.spinner:RegisterCallback("OnValueChanged", function(value) ResultControl = nil self:ImprovementSigil(self, ZO_SmithingTopLevelImprovementPanelResultTooltip) end)
+--	PostFunc = TRADING_HOUSE.SetupPendingPost
+--	TRADING_HOUSE.SetupPendingPost = function() self:PendListing() end
+end
+
 function ddDataDaedra:liminalBridge()
+	self.dataCairn = ZO_SavedVars:NewAccountWide("ddDataCairn", SV_VERSION, nil, self.dataCairn, "Global")
+
+--	ddDataDaedra.dataCairn.Codex:Init()
+--	TASKMASTER = LIB_LAM2:RegisterAddonPanel("ddCodex", ddDataDaedra:mPanel())
+--	LIB_LAM2:RegisterOptionControls("ddCodex", ddDataDaedra:mControls())
+	self:hooks()
+	
 	SLASH_COMMANDS["/dd"] = function(args) 
 		local arguments = {}
 		local searchResult = { string.match(args,"^(%S*)%s*(.-)$") }
@@ -228,19 +286,12 @@ function ddDataDaedra:liminalBridge()
 		
 		self:commands(arguments)
 	end
-	zo_callLater(function() d("DataDaedra Loaded") end, 1000)
---	self:DisplayMsg(GetString(DD_ONLOAD), false)
+	
+	self:DisplayMsg(GetString(DD_ONLOAD), false)
 end
 
 local function onAddonLoaded(eventCode, addonName)	
 	if addonName == ADDON_NAME then
-		ddDataDaedra.dataCairn = ZO_SavedVars:NewAccountWide("ddDataCairn", SV_VERSION, nil, ddDataDaedra.dataCairn, "Global")
---		ddDataDaedra.dataCairn.Codex:Init()
-
---		TASKMASTER = LIB_LAM2:RegisterAddonPanel("ddCodex", ddDataDaedra:mPanel())
---		LIB_LAM2:RegisterOptionControls("ddCodex", ddDataDaedra:mControls())
-		
---		ddDataDaedra:Hooks()
 		ddDataDaedra:liminalBridge()
 		EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
 	end	
