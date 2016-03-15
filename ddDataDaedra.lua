@@ -35,6 +35,21 @@ local									VERSION = "2.0"											--
 
 local LIB_LAM2 	= LibStub("LibAddonMenu-2.0")
 
+local GuildIndex = nil
+local Category = nil
+local FirstRequest = nil
+
+local CompletionFunctions =
+{
+	[GUILD_HISTORY_GENERAL]			= {},
+	[GUILD_HISTORY_BANK]			= {},
+	[GUILD_HISTORY_STORE]			= {},
+	[GUILD_HISTORY_COMBAT]			= {}, --unused
+	[GUILD_HISTORY_ALLIANCE_WAR]	= {},
+}
+
+
+
 --------------------------------------------------------------------------------------------------
 ----------------------------------------   Namespace   -------------------------------------------
 --------------------------------------------------------------------------------------------------
@@ -129,8 +144,10 @@ ddDataDaedra = {
 --------------------------------------------------------------------------------------------------
 
 local DATACAIRN			= ddDataDaedra.dataCairn
+local CODEX				= ddDataDaedra.dataCairn.codex
 local ADDON_NAME 		= ddDataDaedra.name
 local SV_VERSION 		= ddDataDaedra.savedVarsVersion
+local TASKMASTER		= nil
 local fonts	= {
 	"DataDaedraHeader",
 	"DataDaedraBody",
@@ -186,6 +203,145 @@ local fonts	= {
 ------------------------------------   LAM2 Panel Layout   ---------------------------------------
 --------------------------------------------------------------------------------------------------
 
+function ddDataDaedra:mControls()
+	local codex = self.dataCairn.codex
+	local menu = {																				
+--		codex.cResetButton:init(),
+--		codex.cTradeGuild:init(),
+--		codex.cNotes1:init(),
+--		codex.cTwilight:init(),
+--		codex.cTwilightSummon:init(),
+--		codex.cTwilightLogin:init(),
+--		codex.cTwilightZone:init(),
+		self:mDataCore(),
+		self:mTooltips(),
+		self:mMiscellany(),
+	}
+	return menu
+end
+
+function ddDataDaedra:mMiscellany()
+	local codex = self.dataCairn.codex
+	local menu = {
+		type = "submenu",
+		name = "Miscellany",
+		controls = {
+--			codex.cwAvgSalePrice:init(),
+--			codex.cSaveSalePrice:init(),
+			codex.cNotify:init(),
+			codex.cDebug:init(),
+--			codex.cLGHDebug:init(),
+		},
+	}
+	return menu
+end
+
+function ddDataDaedra:mTooltips()
+	local codex = self.dataCairn.codex
+	local menu = {
+		type = "submenu",
+		name = "Tooltip Displays",
+		controls = {
+--			codex.cTooltipFontHeader:init(),
+--			codex.cTooltipFontBody:init(),
+--			codex.cMatMiser:init(),
+		},
+	}
+	return menu
+end
+
+function ddDataDaedra:mDataCore()
+	local codex = self.dataCairn.codex
+	local menu = {
+		type = "submenu",
+		name = "Core Pricing Data",
+		controls = {
+--			codex.cNotes2:init(),
+--			codex.cMaxSeen:init(),
+--			codex.cNotes4:init(),
+--			codex.cSetItem:init(),
+--			codex.cTrait:init(),
+--			codex.cQuality:init(),
+--			codex.cLevel:init(),
+--			codex.cEnchant:init(),
+		},
+	}
+	return menu
+end
+
+function ddDataDaedra:mPanel()
+	local Panel = {
+		type = "panel",
+		name = GetString(DD_TASKMASTER_NAME),
+		displayName = GetString(DD_TASKMASTER_DISPLAYNAME),
+		author = GetString(DD_TASKMASTER_AUTHOR),
+		version = self.version,
+		registerForRefresh = true,
+		registerForDefaults = true,
+	}
+	return Panel
+end
+
+
+
+--------------------------------------------------------------------------------------------------	
+----------------------------------   LAM2 Modular Controls   -------------------------------------	
+--------------------------------------------------------------------------------------------------	
+
+function CODEX:init()															-- Initializes all controls so that they're fully set up and ready to use,
+--	self.cNotes1:init()																					-- regardless of whether they're displayed or active.
+--	self.cTwilight:init()
+--	self.cTwilightLogin:init()
+--	self.cTwilightZone:init()
+--	self.cTwilightSummon:init()
+--	self.cEasyButton:init()
+--	self.cNotes2:init()
+--	self.cResetButton:init()
+--	self.cMaxSeen:init()
+--	self.cNotes4:init()
+--	self.cSetItem:init()
+--	self.cTrait:init()
+--	self.cQuality:init()
+--	self.cLevel:init()
+--	self.cEnchant:init()
+--	self.cTooltipQuality:init()
+--	self.cTradeGuild:init()
+	self.cDebug:init()
+--	self.cLGHDebug:init()
+	self.cNotify:init()
+--	self.cSaveSalePrice:init()
+--	self.cwAvgSalePrice:init()
+--	self.cTooltipFontHeader:init()
+--	self.cTooltipFontBody:init()
+--	self.cMatMiser:init()
+end
+
+function CODEX.cNotify:init()
+	self.type = "checkbox"
+	self.name = GetString(DD_TASKMASTER_NOTIFICATIONS_NAME)
+	self.tooltip = GetString(DD_TASKMASTER_NOTIFICATIONS_TIP)
+	self.width = "full"
+	
+	self.default = true
+	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
+	self.setFunc = function(value) self.value = value end
+	return self
+end
+
+function CODEX.cDebug:init()
+	self.type = "checkbox"
+	self.name = GetString(DD_TASKMASTER_DEBUG_NAME)
+	self.tooltip = GetString(DD_TASKMASTER_DEBUG_TIP)
+	self.width = "full"
+
+	self.default = false
+	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
+	self.setFunc = function(value) self.value = value end
+	return self
+end
+
+
+
 --------------------------------------------------------------------------------------------------
 ----------------------------------------   Key Bindings   ----------------------------------------
 --------------------------------------------------------------------------------------------------
@@ -216,22 +372,92 @@ end
 -----------------------------------------   Arcana   ---------------------------------------------
 --------------------------------------------------------------------------------------------------
 
-function ddDataDaedra:DisplayMsg(msgString, boolDebug)												
---	local tDebug = self.DataCairn.Codex.cDebug.getFunc()											
---	local tNotify = self.DataCairn.Codex.cNotify.getFunc()											
+function ddDataDaedra:DisplayMsg(msgString, boolDebug)
+	local CODEX	= self.dataCairn.codex
+	local tDebug = CODEX.cDebug.getFunc()
+	local tNotify = CODEX.cNotify.getFunc()											
 	
---	if tDebug and 
---	boolDebug then
---		d(GetString(DD_DEBUG) .. msgString)																	
+	if tDebug and 
+	boolDebug then
+		zo_callLater(function() d(GetString(DD_DEBUG) .. msgString) end, 1000)
 
---	elseif tNotify and
---	not boolDebug then
---		d(GetString(DD_MONIKER) .. msgString)
+	elseif tNotify and
+	not boolDebug then
 		zo_callLater(function() d(GetString(DD_MONIKER) .. msgString) end, 1000)
+	end
+end
+
+local function requestPage()
+	local GuildId = GetGuildId(GuildIndex)
+	
+	local pageAvailable
+
+	if (FirstRequest) then
+		pageAvailable = RequestGuildHistoryCategoryNewest(GuildId, Category)
+		ddDataDaedra:DisplayMsg("Requested first page in guild " .. GuildId .. " category " .. Category)
+	else
+		pageAvailable = RequestGuildHistoryCategoryOlder(GuildId, Category)
+		ddDataDaedra:DisplayMsg("Requested next page in guild " .. GuildId .. " category " .. Category)
+	end
+
+	if (pageAvailable) then
+		ddDataDaedra:DisplayMsg("Waiting for page in guild " .. GuildId .. " category " .. Category)
+	else
+		ddDataDaedra:DisplayMsg("Page is not available, advancing")
 		
---	else
---		return
---	end
+		for _, func in pairs(CompletionFunctions[Category]) do func(GuildId) end
+		
+		if (GuildIndex < GetNumGuilds()) then
+			GuildIndex = GuildIndex + 1
+			FirstRequest = true
+			requestPage()
+		else
+			CompletionFunctions[Category] = {}
+			
+			for category, functions in pairs(CompletionFunctions) do
+				if (#functions > 0) then
+					GuildIndex = 1
+					Category = category
+					FirstRequest = true
+					requestPage()
+					return
+				end
+			end
+			
+			EVENT_MANAGER:UnregisterForEvent("LibGuildHistory", EVENT_GUILD_HISTORY_RESPONSE_RECEIVED)
+			GuildIndex = nil
+			Category = nil
+		end	
+	end
+end
+
+local function onGuildHistoryResponseReceived(eventCode, guildId, category)
+	ddDataDaedra:DisplayMsg("History response received for guild " .. guildId .. " category " .. category)
+	
+	if (guildId == GetGuildId(GuildIndex) and category == Category) then
+		if (FirstRequest) then
+			FirstRequest = false
+			requestPage()
+		else
+			zo_callLater(requestPage, 2000)
+		end
+	else
+		ddDataDaedra:DisplayMsg("Warning: Another addon is interfering with LibGuildHistory")
+	end
+end
+
+function ddDataDaedra:requestHistory(category, completionFunc)
+	for _, func in pairs(CompletionFunctions[category]) do if (completionFunc == func) then return end end
+	
+	table.insert(CompletionFunctions[category], completionFunc)
+	
+	if (not GuildIndex) then
+		EVENT_MANAGER:RegisterForEvent("ddGuildHistory", EVENT_GUILD_HISTORY_RESPONSE_RECEIVED, onGuildHistoryResponseReceived)
+		GuildIndex = 1
+		Category = category
+		FirstRequest = true
+		requestPage()
+	end
 end
 
 function ddDataDaedra:hooks()
@@ -243,7 +469,7 @@ function ddDataDaedra:hooks()
 --	ZO_PreHookHandler(PopupTooltip, 'OnUpdate',		function(tooltip) self:InscribePopupSigilstone(tooltip) end)
 --	ZO_PreHookHandler(PopupTooltip,	'OnCleared',	function() PopupControl = nil end)
 	
---	if self.DataCairn.Codex.cMatMiser.getFunc() then
+--	if self.dataCairn.codex.cMatMiser.getFunc() then
 --		ZO_PreHookHandler(ZO_SmithingTopLevelCreationPanelResultTooltip, "OnUpdate", function(tooltip) self:CreationSigil(self, tooltip) end)
 --		ZO_PreHookHandler(ZO_SmithingTopLevelCreationPanelResultTooltip, "OnCleared", function() ResultControl = nil end)
 		
@@ -270,12 +496,13 @@ end
 function ddDataDaedra:liminalBridge()
 	self.dataCairn = ZO_SavedVars:NewAccountWide("ddDataCairn", SV_VERSION, nil, self.dataCairn, "Global")
 
---	ddDataDaedra.dataCairn.Codex:Init()
---	TASKMASTER = LIB_LAM2:RegisterAddonPanel("ddCodex", ddDataDaedra:mPanel())
---	LIB_LAM2:RegisterOptionControls("ddCodex", ddDataDaedra:mControls())
+	self.dataCairn.codex:init()
+	TASKMASTER = LIB_LAM2:RegisterAddonPanel("ddCodex", self:mPanel())
+	LIB_LAM2:RegisterOptionControls("ddCodex", self:mControls())
+	
 	self:hooks()
 	
-	SLASH_COMMANDS["/dd"] = function(args) 
+	SLASH_COMMANDS["/dd"] = function(args) 																-- adds "/dd" and arguments to chatbox commands.
 		local arguments = {}
 		local searchResult = { string.match(args,"^(%S*)%s*(.-)$") }
 		for i,v in pairs(searchResult) do
@@ -288,6 +515,8 @@ function ddDataDaedra:liminalBridge()
 	end
 	
 	self:DisplayMsg(GetString(DD_ONLOAD), false)
+	
+--	self:requestHistory(GUILD_HISTORY_STORE)
 end
 
 local function onAddonLoaded(eventCode, addonName)	
