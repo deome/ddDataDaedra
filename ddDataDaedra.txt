@@ -12,6 +12,7 @@
 ## OptionalDependsOn: LibAddonMenu-2.0
 
 Lib\LibStub\LibStub.lua
+
 Lib\LibAddonMenu-2.0\LibAddonMenu-2.0.lua
 Lib\LibAddonMenu-2.0\controls\panel.lua
 Lib\LibAddonMenu-2.0\controls\submenu.lua
@@ -25,6 +26,8 @@ Lib\LibAddonMenu-2.0\controls\editbox.lua
 Lib\LibAddonMenu-2.0\controls\header.lua
 Lib\LibAddonMenu-2.0\controls\slider.lua
 Lib\LibAddonMenu-2.0\controls\texture.lua
+
+Lib\LibLogos\LibLogos.lua
 
 i18n\$(language).lua
 ddDataDaedra.lua
