@@ -45,8 +45,11 @@ ddDataDaedra = {
 	["name"] 						= "ddDataDaedra",
 	["version"]						= VERSION,
 	["savedVarsVersion"] 			= 8,
+	["isScanning"]					= false,
 	["dataCairn"] = {
 		["lastScan"]				= {},
+		["lastSale"]				= {},
+		["numSales"]				= {},
 		["prices"]					= {},
 		["codex"] = {
 			["init"]				= function() end,
@@ -61,7 +64,7 @@ ddDataDaedra = {
 			["cDebug"] 				= {},
 --			["cwAvgSalePrice"]		= {},
 --			["cSaveSalePrice"]		= {},
---			["cTwilight"]			= {},
+			["cInterval"]			= {},
 --			["cTwilightLogin"]		= {},
 --			["cTwilightZone"]		= {},
 --			["cTwilightSummon"] 	= {},
@@ -79,7 +82,7 @@ ddDataDaedra = {
 	["mControls"] 					= function() end,
 --	["mTooltips"] 					= function() end,
 --	["mDataCore"] 					= function() end,
-	["mGeneral"]					= function() end,	
+--	["mGeneral"]					= function() end,	
 	["KeybindMaiden"]				= function() end,
 	["KeybindTaskmaster"]			= function() end,
 	["KeybindResetPrices"]			= function() end,
@@ -107,7 +110,7 @@ ddDataDaedra = {
 	["LinkStatsToChat"]				= function() end,
 	["EasyButton"] 					= function() end,
 	["TwilightMaiden"]				= function() end,
-	["TwilightSummons"]				= function() end,
+	["twilightSummons"]				= function() end,
 	["BindPortal"] 					= function() end,
 	["DisplayMsg"]					= function() end,	
 	["Hooks"]						= function() end,
@@ -233,17 +236,19 @@ local Str_Item_Trait = {
 
 function ddDataDaedra:mControls()
 	local CODEX = self.dataCairn.codex
-	local menu = {																				
+	local menu = {					
+		CODEX.cNotify:init(),
+		CODEX.cDebug:init(),	
 --		CODEX.cResetButton:init(),
 --		CODEX.cTradeGuild:init(),
 --		CODEX.cNotes1:init(),
---		CODEX.cTwilight:init(),
+		CODEX.cInterval:init(),
 --		CODEX.cTwilightSummon:init(),
 --		CODEX.cTwilightLogin:init(),
 --		CODEX.cTwilightZone:init(),
 --		self:mDataCore(),
 --		self:mTooltips(),
-		self:mGeneral(),
+--		self:mGeneral(),
 	}
 	return menu
 end
@@ -256,9 +261,6 @@ function ddDataDaedra:mGeneral()
 		controls = {
 --			CODEX.cwAvgSalePrice:init(),
 --			CODEX.cSaveSalePrice:init(),
-			CODEX.cNotify:init(),
-			CODEX.cDebug:init(),
---			CODEX.cLGHDebug:init(),
 		},
 	}
 	return menu
@@ -317,7 +319,7 @@ end
 
 function CODEX:init()																					-- Initializes all controls so that they're fully set up and ready to use,
 --	self.cNotes1:init()																					-- regardless of whether they're displayed or active.
---	self.cTwilight:init()
+	self.cInterval:init()
 --	self.cTwilightLogin:init()
 --	self.cTwilightZone:init()
 --	self.cTwilightSummon:init()
@@ -365,7 +367,20 @@ function CODEX.cDebug:init()
 	return self
 end
 
-
+function CODEX.cInterval:init()
+	self.type = "slider"
+	self.name = GetString(DD_TASKMASTER_INTERVAL_NAME)
+	self.tooltip = GetString(DD_TASKMASTER_INTERVAL_TIP)
+	self.width = "full"
+	
+	self.min = 1
+	self.max = 10
+	self.step = 1
+	self.default = 1
+	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
+	self.setFunc = function(value) self.value = value end
+	return self
+end
 
 --------------------------------------------------------------------------------------------------
 ----------------------------------------   Key Bindings   ----------------------------------------
@@ -539,38 +554,42 @@ local function parseLinkValue(itemLink, place)
 end
 
 function ddDataDaedra:TwilightMaiden(guildId)
-	NUMGUILDS				= GetNumGuilds()
 	local DATACAIRN			= self.dataCairn
 	local CODEX				= self.dataCairn.codex
 	local PRICES			= self.dataCairn.prices
-	local CatId 			= GUILD_HISTORY_STORE
-	local GuildName 		= GetGuildName(guildId) or ""
-	local StoreEvents		= GetNumGuildEvents(guildId, CatId)
+	local numGuilds			= GetNumGuilds()
+	local guildName 		= GetGuildName(guildId)
+	local StoreEvents		= GetNumGuildEvents(guildId, GUILD_HISTORY_STORE)
 	local NewSales			= 0
 	
-	if guildId > NUMGUILDS then
+	if guildId > numGuilds then
 		self:DisplayMsg(GetString(DD_TWILIGHT_COMPLETE), false)
 		return
 		
-	elseif not NUMGUILDS or 
-	NUMGUILDS < 1 or
-	not GuildName or
-	GuildName == "" or
-	type(GuildName) ~= "string" or
-	not StoreEvents or
-	StoreEvents < 1 then
+	elseif not numGuilds or 
+	numGuilds < 1 or
+	not guildName or
+	guildName == "" or
+	type(guildName) ~= "string" then
 		return
 	end
 	
-	local LastScan = DATACAIRN.lastScan[GuildName] or 1
+	local lastScan = DATACAIRN.lastScan[guildName] or 1
+	local lastSale = DATACAIRN.lastSale[guildName] or 1
+
 	
 	for i = 1, StoreEvents, 1 do
-		local EventType, SecsSinceEvent, Buyer, Seller, Quantity, ItemLink, Price, Tax = GetGuildEventInfo(guildId, CatId, i)
-		local TimeStamp = GetTimeStamp() - SecsSinceEvent
-		
+		local EventType, secsSinceSale, Buyer, Seller, Quantity, ItemLink, Price, Tax = GetGuildEventInfo(guildId, GUILD_HISTORY_STORE, i)
+		local timeStamp = GetTimeStamp() - secsSinceSale
+
 		if EventType == GUILD_EVENT_ITEM_SOLD and 
-		TimeStamp > LastScan and 
+		timeStamp > lastScan and 
 		ItemLink ~= "" then
+			if not lastSale or 
+			timeStamp > lastSale then
+				DATACAIRN.lastSale[guildName] = (timeStamp - secsSinceSale)
+			end
+			
 			NewSales	= NewSales + 1
 			Quantity 	= tonumber(Quantity)
 			Price 		= tonumber(Price)
@@ -649,22 +668,61 @@ function ddDataDaedra:TwilightMaiden(guildId)
 	end
 	
 	if NewSales > 0 then
-		self:DisplayMsg(zo_strformat(GetString(DD_TWILIGHT_NEWSALES), ZO_CommaDelimitNumber(NewSales), ZO_CommaDelimitNumber(StoreEvents), GuildName), false)
+		self:DisplayMsg(zo_strformat(GetString(DD_TWILIGHT_NEWSALES), ZO_CommaDelimitNumber(NewSales), ZO_CommaDelimitNumber(StoreEvents), guildName), false)
 	end
 
-	DATACAIRN.lastScan[GuildName] = GetTimeStamp()
-	
-	if guildId == NUMGUILDS then
-		self:DisplayMsg(GetString(DD_TWILIGHT_COMPLETE), false)
-	end
+	DATACAIRN.lastScan[guildName] = GetTimeStamp()
 end
 
-function ddDataDaedra:TwilightSummons()
-	NUMGUILDS = GetNumGuilds()
+function ddDataDaedra:twilightSummons()
+	local DATACAIRN = self.dataCairn
+	local scanInterval = self.dataCairn.codex.cInterval.getFunc()
+	local numGuilds = GetNumGuilds()
 	
-	for i = 1, NUMGUILDS, 1 do
-		self:TwilightMaiden(i)
+	if self.historyScan then
+		self:DisplayMsg("twilightSummons shut down due to historyScan", true)
+		return
+
+	elseif numGuilds >= 1 then
+		for guildId = 1, numGuilds, 1 do
+			self:DisplayMsg("Starting Twilight Maiden for " .. GetGuildName(guildId), true)
+			self:TwilightMaiden(guildId)
+		end
 	end
+	
+	self:DisplayMsg(GetString(DD_TWILIGHT_COMPLETE), false)
+end
+
+function ddDataDaedra:checkHistory() 
+	local DATACAIRN = self.dataCairn
+	local scanInterval = self.dataCairn.codex.cInterval.getFunc()
+	local numGuilds = GetNumGuilds()
+
+	self.historyScan = true
+	self.scanTimestamp = GetTimeStamp()
+	
+	if numGuilds >= 1 then
+		for guildId = 1, numGuilds, 1 do
+			local guildName = GetGuildName(guildId)
+			local numEvents = GetNumGuildEvents(guildId, GUILD_HISTORY_STORE)
+			local lastScan = DATACAIRN.lastScan[guildName]
+			
+			if numEvents > 0 then
+				local secsSinceSale = select(2, GetGuildEventInfo(guildId, GUILD_HISTORY_STORE, numEvents))
+
+				if DoesGuildHistoryCategoryHaveMoreEvents(guildId, GUILD_HISTORY_STORE) and 
+				(not lastScan or ((self.scanTimestamp - secsSinceSale) > lastScan)) then
+					self:DisplayMsg("Requesting guild store history page for " .. guildName, true)
+					RequestGuildHistoryCategoryOlder(guildId, GUILD_HISTORY_STORE)
+					zo_callLater(function() self:checkHistory() end, scanInterval * 1000)
+					return
+				end
+			end
+		end
+	end
+	
+	self.historyScan = false
+	self:DisplayMsg("Guild history scan complete.", true)
 end
 
 function ddDataDaedra:hooks()
@@ -707,11 +765,13 @@ function ddDataDaedra:liminalBridge()
 	TASKMASTER = LIB_LAM2:RegisterAddonPanel("ddCodex", self:mPanel())
 	LIB_LAM2:RegisterOptionControls("ddCodex", self:mControls())
 	
+	local scanInterval = self.dataCairn.codex.cInterval.getFunc()
+	
 	self:hooks()
 	
 	self:DisplayMsg(GetString(DD_ONLOAD), false)
-	
-	self:TwilightSummons()
+	self:checkHistory()
+	EVENT_MANAGER:RegisterForUpdate(self.name, (scanInterval * 60 * 1000), function() self:twilightSummons() end)
 end
 
 local function onAddonLoaded(eventCode, addonName)	
