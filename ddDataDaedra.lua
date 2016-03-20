@@ -162,18 +162,6 @@ local fonts	= {
 	"ZoFontGame",
     "ZoFontGameSmall",
 }
-local GuildIndex = nil
-local Category = nil
-local FirstRequest = nil
-
-local CompletionFunctions =
-{
-	[GUILD_HISTORY_GENERAL]			= {},
-	[GUILD_HISTORY_BANK]			= {},
-	[GUILD_HISTORY_STORE]			= {},
-	[GUILD_HISTORY_COMBAT]			= {}, --unused
-	[GUILD_HISTORY_ALLIANCE_WAR]	= {},
-}
 
 local Str_Item_Quality = { 
 [ITEM_QUALITY_NORMAL] 					= SI_ITEMQUALITY1, 
@@ -213,6 +201,104 @@ local Str_Item_Trait = {
 [ITEM_TRAIT_TYPE_ARMOR_NIRNHONED]		= SI_ITEMTRAITTYPE25,
 [ITEM_TRAIT_TYPE_WEAPON_NIRNHONED]		= SI_ITEMTRAITTYPE26,
 }
+
+
+local function parseItemLinkLevel(itemLink)
+	if itemLink == nil then return nil end
+	
+	local vetRank = GetItemLinkRequiredVeteranRank(itemLink)
+	local reqLevel = GetItemLinkRequiredLevel(itemLink)
+	
+	if not vetRank then 
+		vetRank = 0 
+	elseif not reqLevel then 
+		reqLevel = 1 
+	end
+	
+	if vetRank > 0 then
+		return reqLevel, vetRank, zo_strformat(SI_ITEM_FORMAT_STR_LEVEL, reqLevel).." "..reqLevel, zo_strformat(SI_ITEM_FORMAT_STR_RANK, vetRank).." "..vetRank
+	else
+		return reqLevel, vetRank, zo_strformat(SI_ITEM_FORMAT_STR_LEVEL, reqLevel).." "..reqLevel, ""
+	end
+end
+
+local function parseItemLinkQuality(itemLink)
+	if not itemLink then return nil end
+	local iQuality = GetItemLinkQuality(itemLink)
+	
+	return iQuality, zo_strformat(Str_Item_Quality[iQuality])
+end
+
+local function parseItemLinkSetItem(itemLink)
+	if not itemLink then return nil end
+	local iHasSet, setName = GetItemLinkSetInfo(itemLink)
+	
+	if not iHasSet then iHasSet = 0 else iHasSet = 1 end
+	
+	return iHasSet, zo_strformat(SI_ITEM_FORMAT_STR_SET_NAME, setName)
+end
+
+local function parseItemLinkTrait(itemLink)
+	if not itemLink then return nil end
+	local iTrait = select(1, GetItemLinkTraitInfo(itemLink))
+	
+	return iTrait, zo_strformat(Str_Item_Trait[iTrait])
+end
+
+local function parseItemLinkToTable(itemLink)
+	if not itemLink then return nil end
+	local ParsedItemLink = {}
+	
+	for val in string.gmatch(itemLink, "(%d-):") do
+		if val ~= "" then
+			table.insert(ParsedItemLink, val)
+		else
+			table.insert(ParsedItemLink, "item")
+		end
+	end
+	
+	return ParsedItemLink
+end
+
+local function parseLinkValue(itemLink, place)
+	if not itemLink then return nil end
+	local LinkTable = parseItemLinkToTable(itemLink)
+	
+	if (place <= 21 and place >= 1) then
+		local val = tonumber(LinkTable[place])
+		return val
+	else
+		return nil
+	end
+end
+
+local function GetKeyedItem(itemLink)
+	local codex			= self.dataCairn.codex
+	local Prices		= self.dataCairn.Prices
+	local ItemId		= parseLinkValue(itemLink, 3)
+	local EnchtId		= parseLinkValue(itemLink, 6)
+	local SetItem		= parseItemLinkSetItem(itemLink)
+	local Trait			= parseItemLinkTrait(itemLink)
+	local Level, VetRank = parseItemLinkLevel(itemLink)
+	local Quality		= parseItemLinkQuality(itemLink)
+	
+	if Prices[ItemId] then
+		if Prices[ItemId][Trait] then
+			if Prices[ItemId][Trait][Quality] then
+				if Prices[ItemId][Trait][Quality][Level] then
+					if Prices[ItemId][Trait][Quality][Level][VetRank] then
+						if Prices[ItemId][Trait][Quality][Level][VetRank][EnchtId] then
+							return Prices[ItemId][Trait][Quality][Level][VetRank][EnchtId]
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return nil
+end
+
 
 --------------------------------------------------------------------------------------------------
 -------------------------------   Modular Controls by @Deome   -----------------------------------
@@ -376,9 +462,12 @@ function CODEX.cInterval:init()
 	self.min = 1
 	self.max = 10
 	self.step = 1
-	self.default = 1
+	self.default = 5
 	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
-	self.setFunc = function(value) self.value = value end
+	self.setFunc = function(value) EVENT_MANAGER:UnegisterForUpdate(self.name) 
+		self.value = value 
+		EVENT_MANAGER:RegisterForUpdate(self.name, (scanInterval * 60 * 1000), function() self:twilightSummons() end) 
+	end
 	return self
 end
 
@@ -411,148 +500,6 @@ function ddDataDaedra:DisplayMsg(msgString, boolDebug)
 	end
 end
 
-local function requestPage()
-	local GuildId = GetGuildId(GuildIndex)
-	
-	local pageAvailable
-
-	if (FirstRequest) then
-		pageAvailable = RequestGuildHistoryCategoryNewest(GuildId, Category)
-		ddDataDaedra:DisplayMsg("Requested first page in guild " .. GuildId .. " category " .. Category)
-	else
-		pageAvailable = RequestGuildHistoryCategoryOlder(GuildId, Category)
-		ddDataDaedra:DisplayMsg("Requested next page in guild " .. GuildId .. " category " .. Category)
-	end
-
-	if (pageAvailable) then
-		ddDataDaedra:DisplayMsg("Waiting for page in guild " .. GuildId .. " category " .. Category)
-	else
-		ddDataDaedra:DisplayMsg("Page is not available, advancing")
-		
-		for _, func in pairs(CompletionFunctions[Category]) do func(GuildId) end
-		
-		if (GuildIndex < GetNumGuilds()) then
-			GuildIndex = GuildIndex + 1
-			FirstRequest = true
-			requestPage()
-		else
-			CompletionFunctions[Category] = {}
-			
-			for category, functions in pairs(CompletionFunctions) do
-				if (#functions > 0) then
-					GuildIndex = 1
-					Category = category
-					FirstRequest = true
-					requestPage()
-					return
-				end
-			end
-			
-			EVENT_MANAGER:UnregisterForEvent("LibGuildHistory", EVENT_GUILD_HISTORY_RESPONSE_RECEIVED)
-			GuildIndex = nil
-			Category = nil
-		end	
-	end
-end
-
-local function onGuildHistoryResponseReceived(eventCode, guildId, category)
-	ddDataDaedra:DisplayMsg("History response received for guild " .. guildId .. " category " .. category)
-	
-	if (guildId == GetGuildId(GuildIndex) and category == Category) then
-		if (FirstRequest) then
-			FirstRequest = false
-			requestPage()
-		else
-			zo_callLater(requestPage, 2000)
-		end
-	else
-		ddDataDaedra:DisplayMsg("Warning: Another addon is interfering with LibGuildHistory")
-	end
-end
-
-local function requestHistory(category, completionFunc)
-	for _, func in pairs(CompletionFunctions[category]) do if (completionFunc == func) then return end end
-	
-	table.insert(CompletionFunctions[category], completionFunc)
-	
-	if (not GuildIndex) then
-		EVENT_MANAGER:RegisterForEvent("ddGuildHistory", EVENT_GUILD_HISTORY_RESPONSE_RECEIVED, onGuildHistoryResponseReceived)
-		GuildIndex = 1
-		Category = category
-		FirstRequest = true
-		requestPage()
-	end
-end
-
-local function parseItemLinkLevel(itemLink)
-	if itemLink == nil then return nil end
-	
-	local vetRank = GetItemLinkRequiredVeteranRank(itemLink)
-	local reqLevel = GetItemLinkRequiredLevel(itemLink)
-	
-	if not vetRank then 
-		vetRank = 0 
-	elseif not reqLevel then 
-		reqLevel = 1 
-	end
-	
-	if vetRank > 0 then
-		return reqLevel, vetRank, zo_strformat(SI_ITEM_FORMAT_STR_LEVEL, reqLevel).." "..reqLevel, zo_strformat(SI_ITEM_FORMAT_STR_RANK, vetRank).." "..vetRank
-	else
-		return reqLevel, vetRank, zo_strformat(SI_ITEM_FORMAT_STR_LEVEL, reqLevel).." "..reqLevel, ""
-	end
-end
-
-local function parseItemLinkQuality(itemLink)
-	if not itemLink then return nil end
-	local iQuality = GetItemLinkQuality(itemLink)
-	
-	return iQuality, zo_strformat(Str_Item_Quality[iQuality])
-end
-
-local function parseItemLinkSetItem(itemLink)
-	if not itemLink then return nil end
-	local iHasSet, setName = GetItemLinkSetInfo(itemLink)
-	
-	if not iHasSet then iHasSet = 0 else iHasSet = 1 end
-	
-	return iHasSet, zo_strformat(SI_ITEM_FORMAT_STR_SET_NAME, setName)
-end
-
-local function parseItemLinkTrait(itemLink)
-	if not itemLink then return nil end
-	local iTrait = select(1, GetItemLinkTraitInfo(itemLink))
-	
-	return iTrait, zo_strformat(Str_Item_Trait[iTrait])
-end
-
-local function parseItemLinkToTable(itemLink)
-	if not itemLink then return nil end
-	local ParsedItemLink = {}
-	
-	for val in string.gmatch(itemLink, "(%d-):") do
-		if val ~= "" then
-			table.insert(ParsedItemLink, val)
-		else
-			table.insert(ParsedItemLink, "item")
-		end
-	end
-	
-	return ParsedItemLink
-end
-
-local function parseLinkValue(itemLink, place)
-	if not itemLink then return nil end
-	local LinkTable = parseItemLinkToTable(itemLink)
-	
-	if (place <= 21 and place >= 1) then
-		local val = tonumber(LinkTable[place])
-		return val
-	else
-		return nil
-	end
-end
-
 function ddDataDaedra:TwilightMaiden(guildId)
 	local DATACAIRN			= self.dataCairn
 	local CODEX				= self.dataCairn.codex
@@ -576,7 +523,6 @@ function ddDataDaedra:TwilightMaiden(guildId)
 	
 	local lastScan = DATACAIRN.lastScan[guildName] or 1
 	local lastSale = DATACAIRN.lastSale[guildName] or 1
-
 	
 	for i = 1, StoreEvents, 1 do
 		local EventType, secsSinceSale, Buyer, Seller, Quantity, ItemLink, Price, Tax = GetGuildEventInfo(guildId, GUILD_HISTORY_STORE, i)
@@ -668,7 +614,7 @@ function ddDataDaedra:TwilightMaiden(guildId)
 	end
 	
 	if NewSales > 0 then
-		self:DisplayMsg(zo_strformat(GetString(DD_TWILIGHT_NEWSALES), ZO_CommaDelimitNumber(NewSales), ZO_CommaDelimitNumber(StoreEvents), guildName), false)
+--		self:DisplayMsg(zo_strformat(GetString(DD_TWILIGHT_NEWSALES), ZO_CommaDelimitNumber(NewSales), guildName), false)
 	end
 
 	DATACAIRN.lastScan[guildName] = GetTimeStamp()
@@ -685,36 +631,36 @@ function ddDataDaedra:twilightSummons()
 
 	elseif numGuilds >= 1 then
 		for guildId = 1, numGuilds, 1 do
-			self:DisplayMsg("Starting Twilight Maiden for " .. GetGuildName(guildId), true)
+--			self:DisplayMsg("Starting Twilight Maiden for " .. GetGuildName(guildId), true)
 			self:TwilightMaiden(guildId)
 		end
 	end
 	
-	self:DisplayMsg(GetString(DD_TWILIGHT_COMPLETE), false)
+	self:DisplayMsg(GetString(DD_TWILIGHT_COMPLETE), true)
 end
 
 function ddDataDaedra:checkHistory() 
 	local DATACAIRN = self.dataCairn
-	local scanInterval = self.dataCairn.codex.cInterval.getFunc()
 	local numGuilds = GetNumGuilds()
 
 	self.historyScan = true
-	self.scanTimestamp = GetTimeStamp()
 	
 	if numGuilds >= 1 then
 		for guildId = 1, numGuilds, 1 do
 			local guildName = GetGuildName(guildId)
-			local numEvents = GetNumGuildEvents(guildId, GUILD_HISTORY_STORE)
+			local numEvents = GetNumGuildEvents(guildId, GUILD_HISTORY_STORE) -- /script d(GetNumGuildEvents(1, GUILD_HISTORY_STORE))
 			local lastScan = DATACAIRN.lastScan[guildName]
-			
+--			self:DisplayMsg(numEvents, true)
+			RequestGuildHistoryCategoryNewest(guildId, GUILD_HISTORY_STORE)
+--			self:DisplayMsg(numEvents, true)
 			if numEvents > 0 then
 				local secsSinceSale = select(2, GetGuildEventInfo(guildId, GUILD_HISTORY_STORE, numEvents))
 
-				if DoesGuildHistoryCategoryHaveMoreEvents(guildId, GUILD_HISTORY_STORE) and 
-				(not lastScan or ((self.scanTimestamp - secsSinceSale) > lastScan)) then
+				if DoesGuildHistoryCategoryHaveMoreEvents(guildId, GUILD_HISTORY_STORE) and
+				(not lastScan or ((GetTimeStamp() - secsSinceSale) > lastScan)) then
 					self:DisplayMsg("Requesting guild store history page for " .. guildName, true)
 					RequestGuildHistoryCategoryOlder(guildId, GUILD_HISTORY_STORE)
-					zo_callLater(function() self:checkHistory() end, scanInterval * 1000)
+					zo_callLater(function() self:checkHistory() end, 3000)
 					return
 				end
 			end
@@ -722,7 +668,7 @@ function ddDataDaedra:checkHistory()
 	end
 	
 	self.historyScan = false
-	self:DisplayMsg("Guild history scan complete.", true)
+--	self:DisplayMsg("Guild history scan complete.", true)
 end
 
 function ddDataDaedra:hooks()
@@ -770,13 +716,14 @@ function ddDataDaedra:liminalBridge()
 	self:hooks()
 	
 	self:DisplayMsg(GetString(DD_ONLOAD), false)
-	self:checkHistory()
+	self.historyScan = true
+	zo_callLater(function() self:checkHistory() end, 5000)
 	EVENT_MANAGER:RegisterForUpdate(self.name, (scanInterval * 60 * 1000), function() self:twilightSummons() end)
 end
 
 local function onAddonLoaded(eventCode, addonName)	
 	if addonName == ADDON_NAME then
-		ddDataDaedra:liminalBridge()
+		zo_callLater(function() ddDataDaedra:liminalBridge() end, 5000)
 		EVENT_MANAGER:UnregisterForEvent(ADDON_NAME, EVENT_ADD_ON_LOADED)
 	end	
 end

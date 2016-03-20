@@ -20,7 +20,7 @@ ZO_CreateStringId("DD_TWILIGHT_ONLOGIN", "Twilight Maiden will once again update
 ZO_CreateStringId("DD_TWILIGHT_OFFLOGIN", "Twilight Maiden will no longer update prices.")
 ZO_CreateStringId("DD_TWILIGHT_ONZONE", "Twilight Maiden will also update prices when you travel to new places.")
 ZO_CreateStringId("DD_TWILIGHT_OFFZONE", "Twilight Maiden will no longer update prices when traveling to new places.")
-ZO_CreateStringId("DD_TWILIGHT_NEWSALES", "Twilight Maiden found <<1>> new sales, out of <<2>>, in <<3>>.")
+ZO_CreateStringId("DD_TWILIGHT_NEWSALES", "Twilight Maiden found <<1>> new sales in <<2>>.")
 ZO_CreateStringId("DD_TWILIGHT_COMPLETE", "Twilight Maiden has updated all prices.")
 ZO_CreateStringId("DD_TWILIGHT_DISMISS", "Twilight Maiden dismissed, and will not return unless summoned.")
 ZO_CreateStringId("DD_TASKMASTER_NAME", "Deome's DataDaedra")
