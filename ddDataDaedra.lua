@@ -453,6 +453,7 @@ function ddDataDaedra:mControls()
 --		CODEX.cTradeGuild:init(),
 --		CODEX.cNotes1:init(),
 		CODEX.cInterval:init(),
+		CODEX.cwAvgSalePrice:init(),		
 		CODEX.cSaveSalePrice:init(),
 		CODEX.cTooltipFontHeader:init(),
 		CODEX.cTooltipFontBody:init(),		
@@ -472,7 +473,7 @@ function ddDataDaedra:mGeneral()
 		type = "submenu",
 		name = "General",
 		controls = {
---			CODEX.cwAvgSalePrice:init(),
+
 
 		},
 	}
@@ -529,29 +530,16 @@ end
 --------------------------------------------------------------------------------------------------	
 
 function CODEX:init()																					-- Initializes all controls so that they're fully set up and ready to use,
---	self.cNotes1:init()																					-- regardless of whether they're displayed or active.
-	self.cInterval:init()
---	self.cTwilightLogin:init()
---	self.cTwilightZone:init()
---	self.cTwilightSummon:init()
---	self.cNotes2:init()
+	self.cInterval:init()																				-- regardless of whether they're displayed or active.
 --	self.cResetButton:init()
---	self.cMaxSeen:init()
---	self.cNotes4:init()
---	self.cSetItem:init()
---	self.cTrait:init()
---	self.cQuality:init()
---	self.cLevel:init()
---	self.cEnchant:init()
 --	self.cTooltipQuality:init()
---	self.cTradeGuild:init()
 	self.cDebug:init()
 	self.cNotify:init()
 	self.cSaveSalePrice:init()
---	self.cwAvgSalePrice:init()
+	self.cwAvgSalePrice:init()
 	self.cTooltipFontHeader:init()
 	self.cTooltipFontBody:init()
---	self.cMatMiser:init()
+
 end
 
 function CODEX.cNotify:init()
