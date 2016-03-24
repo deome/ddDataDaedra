@@ -129,6 +129,16 @@ local PRICES			= ddDataDaedra.dataCairn.prices
 local ADDON_NAME 		= ddDataDaedra.name
 local SV_VERSION 		= ddDataDaedra.savedVarsVersion
 local TASKMASTER		= nil
+local Sigil				= nil
+local TooltipControl	= nil
+local PopupControl 		= nil
+local ResultControl		= nil
+local SlotControl 		= nil
+local craftingStation	= nil
+local ACTIVE_SLOT		= nil
+local NUMGUILDS			= GetNumGuilds()
+local PostFunc 			= nil
+
 local fonts	= {
 	"DataDaedraHeader",
 	"DataDaedraBody",
@@ -269,6 +279,27 @@ local function parseLinkValue(itemLink, place)
 		return val
 	else
 		return nil
+	end
+end
+
+local function GetItemLinkFromSlotControl(slotControl)
+	local InventorySlot, ItemLink
+	
+	if not slotControl.dataEntry then
+		InventorySlot = slotControl
+		return GetItemLink(InventorySlot.bagId, InventorySlot.slotIndex)
+
+	elseif slotControl.dataEntry then
+		InventorySlot = slotControl.dataEntry.data
+
+		if InventorySlot.bagId and 
+		InventorySlot.slotIndex then
+			return GetItemLink(InventorySlot.bagId, InventorySlot.slotIndex)
+		else
+			return GetItemLink(InventorySlot.bag, InventorySlot.index)
+		end
+	else
+		return ""
 	end
 end
 
@@ -556,7 +587,7 @@ function CODEX.cInterval:init()
 	self.min = 1
 	self.max = 10
 	self.step = 1
-	self.default = 5
+	self.default = 3
 	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
 	self.setFunc = function(value) EVENT_MANAGER:UnregisterForUpdate(ddDataDaedra.name) 
 		self.value = value 
@@ -1258,6 +1289,89 @@ end
 -----------------------------------------   Arcana   ---------------------------------------------
 --------------------------------------------------------------------------------------------------
 
+-- Copyright (c) 2014 Matthew Miller (Mattmillus)
+--
+-- Permission is hereby granted, free of charge, to any person
+-- obtaining a copy of this software and associated documentation
+-- files (the "Software"), to deal in the Software without
+-- restriction, including without limitation the rights to use,
+-- copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the
+-- Software is furnished to do so, subject to the following
+-- conditions:
+--
+-- The above copyright notice and this permission notice shall be
+-- included in all copies or substantial portions of the Software.
+
+function ddDataDaedra:LinkStatsToChat(itemLink)
+	if not itemLink or itemLink == "" then return end
+	itemLink = string.gsub(itemLink, "|H0", "|H1")
+	local KeyedItem = GetKeyedItem(itemLink)
+	local ChatEditControl = CHAT_SYSTEM.textEntry.editControl
+	
+	if not KeyedItem or
+	not KeyedItem.wAvg or
+	KeyedItem.wAvg == 0 or 
+	not KeyedItem.Seen or
+	KeyedItem.Seen == 0 then
+		return
+	end
+	
+	if not ChatEditControl:HasFocus() then 
+		StartChatInput() 
+	end
+	
+	ChatEditControl:InsertText(zo_strformat(GetString(DD_STATS_TO_CHAT), itemLink, KeyedItem.Seen, ZO_CommaDelimitNumber(LIB_LOG:Round(KeyedItem.wAvg))))
+end
+
+function ddDataDaedra:ChatLinkStatsToChat(itemLink, button, control)
+	if type(itemLink) == "string" and 
+	#itemLink > 0 then
+		local handled = LINK_HANDLER:FireCallbacks(LINK_HANDLER.LINK_MOUSE_UP_EVENT, itemLink, button, ZO_LinkHandler_ParseLink(itemLink))
+		
+		if not handled then
+			ClearMenu()
+			
+			if (button == 1 and 
+			ZO_PopupTooltip_SetLink) then
+				ZO_PopupTooltip_SetLink(itemLink)
+			
+			elseif (button == 2 and 
+			itemLink ~= "") then				
+				if IsKeyedItem(itemLink) then
+					AddMenuItem(GetString(SI_ITEM_ACTION_DD_STATS_TO_CHAT), function() self:LinkStatsToChat(itemLink) end) 
+				end
+				
+				AddMenuItem(GetString(SI_ITEM_ACTION_LINK_TO_CHAT), function() ZO_LinkHandler_InsertLink(zo_strformat(SI_TOOLTIP_ITEM_NAME, itemLink)) end)
+				ShowMenu(control)
+			end
+		end
+	end
+end
+
+function ddDataDaedra:SlotControlStatsToChat()
+	if(SlotControl:GetOwningWindow() == ZO_TradingHouse) then return end
+	if(ZO_PlayerInventoryBackpack:IsHidden() and 
+	ZO_PlayerBankBackpack:IsHidden() and 
+	ZO_GuildBankBackpack:IsHidden() and 
+	ZO_SmithingTopLevelDeconstructionPanelInventoryBackpack:IsHidden() and 
+	ZO_EnchantingTopLevelInventoryBackpack:IsHidden()) then 
+		return 
+	end
+	
+	if(SlotControl:GetParent() ~= ZO_Character) then
+		SlotControl = SlotControl:GetParent()
+	end
+	
+	local ItemLink = GetItemLinkFromSlotControl(SlotControl)
+	if IsKeyedItem(ItemLink) then
+		zo_callLater(function() AddMenuItem(GetString(SI_ITEM_ACTION_DD_STATS_TO_CHAT), function() ddDataDaedra:LinkStatsToChat(ItemLink) end, MENU_ADD_OPTION_LABEL); ShowMenu(self) end, 50)
+	end
+end
+
+---------------------------------------------------------------------------------------------------
+
+
 function ddDataDaedra:DisplayMsg(msgString, boolDebug)
 	local CODEX	= self.dataCairn.codex
 	local tDebug = CODEX.cDebug.getFunc()
@@ -1448,7 +1562,7 @@ end
 
 function ddDataDaedra:hooks()
 	ZO_PreHook(TRADING_HOUSE, "PostPendingItem", function() SavePrice() end)
---	ZO_PreHook("ZO_InventorySlot_ShowContextMenu", function(rowControl) SlotControl = rowControl; self:SlotControlStatsToChat() end)
+	ZO_PreHook("ZO_InventorySlot_ShowContextMenu", function(rowControl) SlotControl = rowControl; self:SlotControlStatsToChat() end)
 	
 	ZO_PreHookHandler(ItemTooltip, 	'OnUpdate',		function(tooltip) self:SigilDesign(tooltip) end)
 	ZO_PreHookHandler(ItemTooltip, 	'OnCleared',	function() TooltipControl = nil end)
@@ -1472,11 +1586,11 @@ function ddDataDaedra:hooks()
 		ZO_PreHookHandler(ZO_AlchemyTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
 --	end
 	
---	ZO_LinkHandler_OnLinkMouseUp = function(itemLink, button, control) self:ChatLinkStatsToChat(itemLink, button, control) end
+	ZO_LinkHandler_OnLinkMouseUp = function(itemLink, button, control) self:ChatLinkStatsToChat(itemLink, button, control) end
 	LINK_HANDLER:RegisterCallback(LINK_HANDLER.LINK_CLICKED_EVENT, function() self:InscribePopupSigilstone(self, PopupTooltip) end)	
 	SMITHING.improvementPanel.spinner:RegisterCallback("OnValueChanged", function(value) ResultControl = nil self:ImprovementSigil(self, ZO_SmithingTopLevelImprovementPanelResultTooltip) end)
---	PostFunc = TRADING_HOUSE.SetupPendingPost
---	TRADING_HOUSE.SetupPendingPost = function() self:PendListing() end
+	PostFunc = TRADING_HOUSE.SetupPendingPost
+	TRADING_HOUSE.SetupPendingPost = function() PendListing() end
 end
 
 function ddDataDaedra:liminalBridge()
