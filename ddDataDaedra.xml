@@ -1,0 +1,39 @@
+<!------------------------------------------------------------------------------------------------
+-----------------------------------------   DataDaedra   -----------------------------------------
+---------------------------   by Deome (@deome) - heydeome@gmail.com   ---------------------------
+local									VERSION = "2.0"											--
+--																								--
+--																								--
+---------------------------------------   Deome's License   --------------------------------------
+--																								--
+-- 		Copyright (c) 2014, 2015, 2016 D. Deome (@deome) - heydeome@gmail.com					--
+--																								--
+-- 		This software is provided 'as-is', without any express or implied						--
+-- 		warranty. In no event will the author(s) be held liable for any damages					--
+-- 		arising from the use of this software. This software, and the ideas, processes, 		--
+--		functions, and all other intellectual property contained within may not be modified,	--
+--		distributed, or used in any other works without the written permission of the			--
+--		author.																					--
+--																								--
+--		Any use with permission of author must include the above license and copyright,			--
+--		and any other license and copyright notices noted within this software.			 		--
+--																								--
+-------------------------------------   ZO Obligatory Spam   -------------------------------------
+--																								--
+-- 		"This Add-on is not created by, affiliated with or sponsored by ZeniMax 		  		--
+--		Media Inc. or its affiliates. The Elder Scrolls® and related logos are registered 	 	--
+--		trademarks of ZeniMax Media Inc. in the United States and/or other countries. 			--
+--		All rights reserved."																	--
+--																								--
+--------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------
+
+
+--------------------------------------------------------------------------------------------------
+------------------------------------------   Fonts   ---------------------------------------------
+------------------------------------------------------------------------------------------------->
+
+<GuiXml>
+    <Font name="DataDaedraBody" font="$(STONE_TABLET_FONT)|16" />
+    <Font name="DataDaedraHeader" font="$(HANDWRITTEN_FONT)|22|soft-shadow-thick" />
+</GuiXml>

@@ -30,4 +30,5 @@ Lib\LibAddonMenu-2.0\controls\texture.lua
 Lib\LibLogos\LibLogos.lua
 
 i18n\$(language).lua
+ddDataDaedra.xml
 ddDataDaedra.lua

@@ -53,36 +53,36 @@ ddDataDaedra = {
 		["prices"]					= {},
 		["codex"] = {
 			["init"]				= function() end,
---			["cTradeGuild"] 		= {},
---			["cNotes1"] 			= {},
---			["cNotes2"] 			= {},
---			["cNotes3"] 			= {},
---			["cNotes4"] 			= {},
---			["cResetButton"] 		= {},
---			["cPanelHeader"] 		= {},
+			["cTradeGuild"] 		= {},
+			["cNotes1"] 			= {},
+			["cNotes2"] 			= {},
+			["cNotes3"] 			= {},
+			["cNotes4"] 			= {},
+			["cResetButton"] 		= {},
+			["cPanelHeader"] 		= {},
 			["cNotify"] 			= {},
 			["cDebug"] 				= {},
---			["cwAvgSalePrice"]		= {},
---			["cSaveSalePrice"]		= {},
+			["cwAvgSalePrice"]		= {},
+			["cSaveSalePrice"]		= {},
 			["cInterval"]			= {},
---			["cTwilightLogin"]		= {},
---			["cTwilightZone"]		= {},
---			["cTwilightSummon"] 	= {},
---			["cTooltipDetails"] 	= {},
---			["cTooltipFontHeader"] 	= {},
---			["cTooltipFontBody"] 	= {},
---			["cTooltipQuality"] 	= {},
---			["cTooltipSeen"] 		= {},
---			["cMatMiser"] 			= {},
+			["cTwilightLogin"]		= {},
+			["cTwilightZone"]		= {},
+			["cTwilightSummon"] 	= {},
+			["cTooltipDetails"] 	= {},
+			["cTooltipFontHeader"] 	= {},
+			["cTooltipFontBody"] 	= {},
+			["cTooltipQuality"] 	= {},
+			["cTooltipSeen"] 		= {},
+			["cMatMiser"] 			= {},
 		},
 		["UI"] = {
 		},
 	},
 	["mPanel"] 						= function() end,
 	["mControls"] 					= function() end,
---	["mTooltips"] 					= function() end,
---	["mDataCore"] 					= function() end,
---	["mGeneral"]					= function() end,	
+	["mTooltips"] 					= function() end,
+	["mDataCore"] 					= function() end,
+	["mGeneral"]					= function() end,	
 	["KeybindMaiden"]				= function() end,
 	["KeybindTaskmaster"]			= function() end,
 	["KeybindResetPrices"]			= function() end,
@@ -273,22 +273,21 @@ local function parseLinkValue(itemLink, place)
 end
 
 local function GetKeyedItem(itemLink)
-	local codex			= self.dataCairn.codex
-	local Prices		= self.dataCairn.Prices
+	local codex			= ddDataDaedra.dataCairn.codex
+	local PRICES		= ddDataDaedra.dataCairn.prices
 	local ItemId		= parseLinkValue(itemLink, 3)
 	local EnchtId		= parseLinkValue(itemLink, 6)
-	local SetItem		= parseItemLinkSetItem(itemLink)
 	local Trait			= parseItemLinkTrait(itemLink)
 	local Level, VetRank = parseItemLinkLevel(itemLink)
 	local Quality		= parseItemLinkQuality(itemLink)
 	
-	if Prices[ItemId] then
-		if Prices[ItemId][Trait] then
-			if Prices[ItemId][Trait][Quality] then
-				if Prices[ItemId][Trait][Quality][Level] then
-					if Prices[ItemId][Trait][Quality][Level][VetRank] then
-						if Prices[ItemId][Trait][Quality][Level][VetRank][EnchtId] then
-							return Prices[ItemId][Trait][Quality][Level][VetRank][EnchtId]
+	if PRICES[ItemId] then
+		if PRICES[ItemId][Trait] then
+			if PRICES[ItemId][Trait][Quality] then
+				if PRICES[ItemId][Trait][Quality][Level] then
+					if PRICES[ItemId][Trait][Quality][Level][VetRank] then
+						if PRICES[ItemId][Trait][Quality][Level][VetRank][EnchtId] then
+							return PRICES[ItemId][Trait][Quality][Level][VetRank][EnchtId]
 						end
 					end
 				end
@@ -299,6 +298,100 @@ local function GetKeyedItem(itemLink)
 	return nil
 end
 
+local function IsKeyedItem(itemLink)
+	local KeyedItem = GetKeyedItem(itemLink)
+	
+	if not KeyedItem then 
+		return false 
+	else 
+		return true 
+	end
+end
+
+local function PendListing()
+	local twAvgSalePrice = ddDataDaedra.dataCairn.codex.cwAvgSalePrice.getFunc()
+	local tSaveSalePrice = ddDataDaedra.dataCairn.codex.cSaveSalePrice.getFunc()
+	PostFunc(TRADING_HOUSE)
+	
+	if TRADING_HOUSE.m_pendingItemSlot and 
+	(twAvgSalePrice or tSaveSalePrice) then
+		local ItemLink 		= GetItemLink(BAG_BACKPACK, TRADING_HOUSE.m_pendingItemSlot)
+		local KeyedItem 	= GetKeyedItem(ItemLink)
+		local Stack 		= select(2, GetItemInfo(BAG_BACKPACK, TRADING_HOUSE.m_pendingItemSlot)) or 1
+		
+		if KeyedItem and
+		(twAvgSalePrice or tSaveSalePrice) then
+			if not KeyedItem.wAvg then KeyedItem.wAvg = 0 end
+			if not KeyedItem.PostPrice then KeyedItem.PostPrice = 0 end
+			
+			if twAvgSalePrice and
+			KeyedItem.wAvg ~= 0 then
+				if tSaveSalePrice and
+				KeyedItem.PostPrice ~= 0 and
+				KeyedItem.PostPrice > KeyedItem.wAvg then
+					TRADING_HOUSE:SetPendingPostPrice(LIB_LOG:Round(KeyedItem.PostPrice * Stack))
+				else
+					TRADING_HOUSE:SetPendingPostPrice(LIB_LOG:Round(KeyedItem.wAvg * Stack))
+				end
+			
+			elseif tSaveSalePrice and
+			KeyedItem.PostPrice ~= 0 then
+				TRADING_HOUSE:SetPendingPostPrice(LIB_LOG:Round(KeyedItem.PostPrice * Stack))
+			end
+		end		
+	end
+end
+
+local function SavePrice()
+	local CODEX				= ddDataDaedra.dataCairn.codex
+	local tSaveSalePrice	= CODEX.cSaveSalePrice.getFunc()
+	local itemLink 			= GetItemLink(BAG_BACKPACK, TRADING_HOUSE.m_pendingItemSlot)
+	local Stack 			= select(2, GetItemInfo(BAG_BACKPACK, TRADING_HOUSE.m_pendingItemSlot))
+	local KeyedItem			= GetKeyedItem(itemLink)
+	local PostPrice 		= LIB_LOG:Round(LIB_LOG:RoundTo100s(TRADING_HOUSE.m_invoiceSellPrice.sellPrice / Stack))
+	
+	if tSaveSalePrice then
+		if KeyedItem then
+			local wAvgPrice	= LIB_LOG:Round(LIB_LOG:RoundTo100s(KeyedItem.wAvg / Stack))
+			
+			if wAvgPrice ~= PostPrice then
+				KeyedItem.PostPrice = PostPrice
+			end
+		else
+			local PRICES		= ddDataDaedra.dataCairn.prices
+			local ItemId		= parseLinkValue(itemLink, 3)
+			local EnchtId		= parseLinkValue(itemLink, 6)
+			local Trait			= parseItemLinkTrait(itemLink)
+			local Level, VetRank = parseItemLinkLevel(itemLink)
+			local Quality		= parseItemLinkQuality(itemLink)
+			
+			Values = { 
+				["Seen"] 		= 0,
+				["RawValue"] 	= 0, 
+				["Weight"] 		= 0, 
+				["wAvg"] 		= 0,
+				["PostPrice"]	= PostPrice,
+			}
+			
+			if PRICES[ItemId] then
+				if PRICES[ItemId] then
+					if PRICES[ItemId][Trait] then
+						if PRICES[ItemId][Trait][Quality] then
+							if PRICES[ItemId][Trait][Quality][Level] then
+								if PRICES[ItemId][Trait][Quality][Level][VetRank] then
+									if not PRICES[ItemId][Trait][Quality][Level][VetRank][EnchtId] then
+										table.insert(PRICES[ItemId][Trait][Quality][Level][VetRank], EnchtId, Values)
+									end
+
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end
 
 --------------------------------------------------------------------------------------------------
 -------------------------------   Modular Controls by @Deome   -----------------------------------
@@ -329,6 +422,9 @@ function ddDataDaedra:mControls()
 --		CODEX.cTradeGuild:init(),
 --		CODEX.cNotes1:init(),
 		CODEX.cInterval:init(),
+		CODEX.cSaveSalePrice:init(),
+		CODEX.cTooltipFontHeader:init(),
+		CODEX.cTooltipFontBody:init(),		
 --		CODEX.cTwilightSummon:init(),
 --		CODEX.cTwilightLogin:init(),
 --		CODEX.cTwilightZone:init(),
@@ -346,7 +442,7 @@ function ddDataDaedra:mGeneral()
 		name = "General",
 		controls = {
 --			CODEX.cwAvgSalePrice:init(),
---			CODEX.cSaveSalePrice:init(),
+
 		},
 	}
 	return menu
@@ -358,8 +454,6 @@ function ddDataDaedra:mTooltips()
 		type = "submenu",
 		name = "Tooltip Displays",
 		controls = {
---			CODEX.cTooltipFontHeader:init(),
---			CODEX.cTooltipFontBody:init(),
 --			CODEX.cMatMiser:init(),
 		},
 	}
@@ -422,10 +516,10 @@ function CODEX:init()																					-- Initializes all controls so that th
 --	self.cTradeGuild:init()
 	self.cDebug:init()
 	self.cNotify:init()
---	self.cSaveSalePrice:init()
+	self.cSaveSalePrice:init()
 --	self.cwAvgSalePrice:init()
---	self.cTooltipFontHeader:init()
---	self.cTooltipFontBody:init()
+	self.cTooltipFontHeader:init()
+	self.cTooltipFontBody:init()
 --	self.cMatMiser:init()
 end
 
@@ -464,12 +558,63 @@ function CODEX.cInterval:init()
 	self.step = 1
 	self.default = 5
 	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
-	self.setFunc = function(value) EVENT_MANAGER:UnegisterForUpdate(self.name) 
+	self.setFunc = function(value) EVENT_MANAGER:UnregisterForUpdate(ddDataDaedra.name) 
 		self.value = value 
-		EVENT_MANAGER:RegisterForUpdate(self.name, (scanInterval * 60 * 1000), function() self:twilightSummons() end) 
+		EVENT_MANAGER:RegisterForUpdate(ddDataDaedra.name, (self.value * 60 * 1000), function() ddDataDaedra:twilightSummons() end) 
 	end
 	return self
 end
+
+function CODEX.cSaveSalePrice:init()
+	self.type = "checkbox"
+	self.name = GetString(DD_TASKMASTER_SAVE_SALE_PRICE_NAME)
+	self.tooltip = GetString(DD_TASKMASTER_SAVE_SALE_PRICE_TIP)
+	self.width = "full"
+	
+	self.default = true
+	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
+	self.setFunc = function(value) self.value = value end
+	return self
+end
+
+function CODEX.cwAvgSalePrice:init()
+	self.type = "checkbox"
+	self.name = GetString(DD_TASKMASTER_WAVG_SALE_PRICE_NAME)
+	self.tooltip = GetString(DD_TASKMASTER_WAVG_SALE_PRICE_TIP)
+	self.width = "full"
+	
+	self.default = true
+	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
+	self.setFunc = function(value) self.value = value end
+	return self
+end
+
+function CODEX.cTooltipFontHeader:init()
+	self.type = "dropdown"
+	self.name = GetString(DD_TASKMASTER_TOOLTIP_HEADER_FONT_NAME)
+	self.tooltip = GetString(DD_TASKMASTER_TOOLTIP_HEADER_FONT_TIP)
+	self.width = "full"
+	
+	self.choices = fonts
+	self.default = fonts[1]
+	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
+	self.setFunc = function(value) self.value = value end
+	return self
+end
+
+function CODEX.cTooltipFontBody:init()
+	self.type = "dropdown"
+	self.name = GetString(DD_TASKMASTER_TOOLTIP_BODY_FONT_NAME)
+	self.tooltip = GetString(DD_TASKMASTER_TOOLTIP_BODY_FONT_TIP)
+	self.width = "full"
+	
+	self.choices = fonts
+	self.default = fonts[2]
+	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
+	self.setFunc = function(value) self.value = value end
+	return self
+end
+
 
 --------------------------------------------------------------------------------------------------
 ----------------------------------------   Key Bindings   ----------------------------------------
@@ -479,6 +624,634 @@ end
 --------------------------------------------------------------------------------------------------
 ----------------------------------------   UI Bindings   -----------------------------------------
 --------------------------------------------------------------------------------------------------
+
+function ddDataDaedra:SeenToStr(seen)
+	local LowSeen		= 25
+	local HighSeen		= 100
+	local Str_SeenColor = "|cFF0000"
+
+	if seen > LowSeen and 
+	seen < HighSeen then
+		Str_SeenColor = "|cFFFF00"
+	elseif seen >= HighSeen then
+		Str_SeenColor = "|c00FF00"
+	end
+	
+	return zo_strformat(GetString(DD_TOOLTIP_STAT_SEEN), Str_SeenColor, ZO_CommaDelimitNumber(seen), zo_iconFormat("esoui/art/miscellaneous/search_icon.dds", 32, 32))
+end
+
+function ddDataDaedra:wAvgToStr(wAvg)
+	return zo_strformat(GetString(DD_TOOLTIP_STAT_WAVG), ZO_CommaDelimitNumber(LIB_LOG:Round(wAvg)), zo_iconFormat("esoui/art/currency/currency_gold.dds", 18, 18))
+end
+
+function ddDataDaedra:StackToStr(wAvg, stack)
+	return zo_strformat(GetString(DD_TOOLTIP_STAT_STACK), ZO_CommaDelimitNumber(LIB_LOG:Round(wAvg * stack)), zo_iconFormat("esoui/art/currency/currency_gold.dds", 18, 18), stack)
+end
+
+function ddDataDaedra:ResizeSigil(tooltip, label)
+	local DimDefault 	= 416
+	local Pad1, Pad2	= tooltip:GetResizeToFitPadding()
+	local labelWidth	= label:GetTextWidth()
+
+	if (labelWidth + Pad1) > DimDefault then
+		local NewDim = Pad1 + labelWidth
+		tooltip:SetDimensionConstraints(NewDim, -1, NewDim, -1)
+	else
+		tooltip:SetDimensionConstraints(DimDefault, -1, DimDefault, -1)
+	end
+end
+
+function ddDataDaedra:CreateItemSigil(tooltip, keyedItem, stack)
+	if not tooltip.labelPool then
+        tooltip.labelPool = ZO_ControlPool:New("ZO_TooltipLabel", tooltip, "Label")
+    end
+	if not stack or stack < 2 then stack = 1 end
+--	local vMaxSeen			= self.dataCairn.codex.cMaxSeen.getFunc()
+	local FontHeader		= self.dataCairn.codex.cTooltipFontHeader.getFunc()
+	local FontBody			= self.dataCairn.codex.cTooltipFontBody.getFunc()
+	local SigilHeader 		= tooltip.labelPool:AcquireObject()
+    local SigilLabel 		= tooltip.labelPool:AcquireObject()
+	local BulletIcon		= zo_iconFormat(GetString(DD_ICON_BULLET), 12, 12)
+	local Str_Buffer 		= " "..BulletIcon.." "
+	local Str_Seen			= self:SeenToStr(keyedItem.Seen)
+	local Str_wAvg			= self:wAvgToStr(keyedItem.wAvg)
+	local Str_Stack			= self:StackToStr(keyedItem.wAvg, stack)
+	local Str_Sigil			= Str_Seen..Str_Buffer..Str_wAvg
+	
+	if stack > 1 then 
+		Str_Sigil = Str_Sigil..Str_Buffer..Str_Stack 
+	end
+
+	tooltip:AddVerticalPadding(20)
+	ZO_Tooltip_AddDivider(tooltip)
+
+	tooltip:AddControl(SigilHeader)
+	SigilHeader:SetAnchor(CENTER)
+	SigilHeader:SetHorizontalAlignment(CENTER)
+	SigilHeader:SetFont(FontHeader)
+	SigilHeader:SetModifyTextType(MODIFY_TEXT_TYPE_NONE)
+	SigilHeader:SetColor(ZO_TOOLTIP_DEFAULT_COLOR:UnpackRGB())
+	SigilHeader:SetText(GetString(DD_TOOLTIP_HEADER))
+	
+	tooltip:AddControl(SigilLabel)
+	SigilLabel:SetAnchor(CENTER)
+	SigilLabel:SetHorizontalAlignment(CENTER)
+	SigilLabel:SetFont(FontBody)
+	SigilLabel:SetModifyTextType(MODIFY_TEXT_TYPE_NONE)	
+	SigilLabel:SetColor(ZO_TOOLTIP_DEFAULT_COLOR:UnpackRGB())
+	SigilLabel:SetText(Str_Sigil)
+	self:ResizeSigil(tooltip, SigilLabel)
+end
+
+function ddDataDaedra:CreateMiserSigil(tooltip, str_TotalCost)
+	if not tooltip.labelPool then
+        tooltip.labelPool = ZO_ControlPool:New("ZO_TooltipLabel", tooltip, "Label")
+    end
+
+	local FontHeader	= self.dataCairn.codex.cTooltipFontHeader.getFunc()
+	local FontBody		= self.dataCairn.codex.cTooltipFontBody.getFunc()
+	local MiserHeader 	= tooltip.labelPool:AcquireObject()
+    local MiserLabel 	= tooltip.labelPool:AcquireObject()
+	
+	tooltip:AddVerticalPadding(20)
+	
+	tooltip:AddControl(MiserHeader)
+	MiserHeader:SetAnchor(CENTER)
+	MiserHeader:SetHorizontalAlignment(CENTER)
+	MiserHeader:SetFont(FontHeader)
+	MiserHeader:SetModifyTextType(MODIFY_TEXT_TYPE_NONE)
+	MiserHeader:SetColor(ZO_TOOLTIP_DEFAULT_COLOR:UnpackRGB())
+	MiserHeader:SetText(GetString(DD_TOOLTIP_CRAFTING_HEADER))
+
+	tooltip:AddControl(MiserLabel)
+	MiserLabel:SetAnchor(CENTER)
+	MiserLabel:SetHorizontalAlignment(CENTER)
+	MiserLabel:SetFont(FontBody)
+	MiserLabel:SetModifyTextType(MODIFY_TEXT_TYPE_NONE)
+	MiserLabel:SetColor(ZO_TOOLTIP_DEFAULT_COLOR:UnpackRGB())
+	MiserLabel:SetText(str_TotalCost)
+	self:ResizeSigil(tooltip, MiserLabel)
+end
+
+function ddDataDaedra:InscribePopupSigilstone(tooltip)
+	if tooltip == PopupControl then return end
+	PopupControl = tooltip
+
+	local ResultKeyedItem 	= GetKeyedItem(PopupControl.lastLink)
+	
+	if ResultKeyedItem and
+	ResultKeyedItem.wAvg and
+	ResultKeyedItem.Seen and
+	ResultKeyedItem.wAvg > 0 and
+	ResultKeyedItem.Seen > 0 then
+		self:CreateItemSigil(tooltip, ResultKeyedItem)
+	end
+end
+
+function ddDataDaedra:InscribeItemSigilstone(tooltip, itemLink, stack)
+	if not tooltip or 
+	not itemLink or 
+	itemLink == "" then 
+		return 
+
+	elseif not stack or
+	stack < 2 then 
+		stack = 1
+	end
+
+	local ResultKeyedItem = GetKeyedItem(itemLink)
+	
+	if ResultKeyedItem and
+	ResultKeyedItem.wAvg and
+	ResultKeyedItem.Seen and
+	ResultKeyedItem.wAvg > 0 and
+	ResultKeyedItem.Seen > 0 then
+		self:CreateItemSigil(tooltip, ResultKeyedItem, stack)
+	end
+end
+
+function ddDataDaedra:InscribeCraftSigilstone(tooltip, resultLink, resultStack, str_TotalCost)
+	if not tooltip then return end
+	local ResultKeyedItem = GetKeyedItem(resultLink)
+
+	if not resultStack or 
+	resultStack < 2 then 
+		resultStack = 1 
+	end
+	
+	if ResultKeyedItem and
+	ResultKeyedItem.wAvg and
+	ResultKeyedItem.Seen and
+	ResultKeyedItem.wAvg > 0 and
+	ResultKeyedItem.Seen > 0 then
+		self:CreateItemSigil(tooltip, ResultKeyedItem, resultStack)
+	end
+
+	self:CreateMiserSigil(tooltip, str_TotalCost)
+end
+
+function ddDataDaedra:AlchemySigil(self, tooltip)
+	if not tooltip or
+	tooltip == ResultControl then
+		return
+	end
+	ResultControl = tooltip
+	craftingStation = ALCHEMY
+	
+	local SolventBagId = craftingStation.solventSlot.bagId
+	local SolventSlotIndex = craftingStation.solventSlot.slotIndex
+	local SolventItemLink = GetItemLink(SolventBagId, SolventSlotIndex, LINK_STYLE_BRACKETS)
+	local SolventIcon = zo_iconFormat(GetItemLinkInfo(SolventItemLink), 28, 28)
+	local SolventKeyedItem = GetKeyedItem(SolventItemLink)
+	local SolventCost = 0
+	
+	if SolventKeyedItem and
+	SolventKeyedItem.wAvg and
+	SolventKeyedItem.wAvg > 0 then
+		SolventCost = SolventKeyedItem.wAvg
+	end
+	
+	local Reagent1BagId	= craftingStation.reagentSlots[1].bagId
+	local Reagent1SlotIndex = craftingStation.reagentSlots[1].slotIndex
+	local Reagent1ItemLink = GetItemLink(Reagent1BagId, Reagent1SlotIndex, LINK_STYLE_BRACKETS)
+	local Reagent1Icon = zo_iconFormat(GetItemLinkInfo(Reagent1ItemLink), 28, 28)
+	local Reagent1KeyedItem = GetKeyedItem(Reagent1ItemLink)
+	local Reagent1Cost = 0
+	
+	if Reagent1KeyedItem and
+	Reagent1KeyedItem.wAvg and
+	Reagent1KeyedItem.wAvg > 0 then
+		Reagent1Cost = Reagent1KeyedItem.wAvg
+	end
+	
+	local Reagent2BagId = craftingStation.reagentSlots[2].bagId
+	local Reagent2SlotIndex = craftingStation.reagentSlots[2].slotIndex
+	local Reagent2ItemLink = GetItemLink(Reagent2BagId, Reagent2SlotIndex, LINK_STYLE_BRACKETS)
+	local Reagent2Icon = zo_iconFormat(GetItemLinkInfo(Reagent2ItemLink), 28, 28)
+	local Reagent2KeyedItem = GetKeyedItem(Reagent2ItemLink)
+	local Reagent2Cost = 0
+	
+	if Reagent2KeyedItem and
+	Reagent2KeyedItem.wAvg and
+	Reagent2KeyedItem.wAvg > 0 then
+		Reagent2Cost = Reagent2KeyedItem.wAvg
+	end
+	
+	local Reagent3BagId = craftingStation.reagentSlots[3].bagId
+	local Reagent3SlotIndex = craftingStation.reagentSlots[3].slotIndex
+	local Reagent3ItemLink = GetItemLink(Reagent3BagId, Reagent3SlotIndex, LINK_STYLE_BRACKETS)
+	local Reagent3Icon = zo_iconFormat(GetItemLinkInfo(Reagent3ItemLink), 28, 28)
+	local Reagent3KeyedItem = GetKeyedItem(Reagent3ItemLink)
+	local Reagent3Cost = 0
+	
+	if Reagent3KeyedItem and
+	Reagent3KeyedItem.wAvg and
+	Reagent3KeyedItem.wAvg > 0 then
+		Reagent3Cost = Reagent3KeyedItem.wAvg
+	end	
+	
+	local PotionLink = GetAlchemyResultingItemLink(SolventBagId, SolventSlotIndex, Reagent1BagId, Reagent1SlotIndex, Reagent2BagId, Reagent2SlotIndex, Reagent3BagId, Reagent3SlotIndex, LINK_STYLE_BRACKETS)
+	local PotionCount = select(3, GetAlchemyResultingItemInfo(SolventBagId, SolventSlotIndex, Reagent1BagId, Reagent1SlotIndex, Reagent2BagId, Reagent2SlotIndex, Reagent3BagId, Reagent3SlotIndex, LINK_STYLE_BRACKETS))
+	local TotalCost = LIB_LOG:Round(SolventCost + Reagent1Cost + Reagent2Cost + Reagent3Cost)
+	
+	if TotalCost ~= 0 then
+		local Str_TotalReagentCost = ""
+		local Str_Buffer = " "
+		local GoldIcon = zo_iconFormat(GetString(DD_ICON_GOLD), 20, 20)
+		local PlusIcon = zo_iconFormat("esoui/art/progression/addpoints_up.dds", 32, 32)
+		local EqualsIcon = zo_iconFormat("/esoui/art/progression/progression_tabicon_passive_inactive.dds", 32, 32)
+		local Str_TotalCost = zo_strformat(GetString(DD_TOOLTIP_CRAFTING_WAVG), ZO_CommaDelimitNumber(TotalCost), GoldIcon)
+		
+		if SolventCost > 0 and
+		Reagent1Cost > 0 then
+			Str_TotalReagentCost = SolventIcon..Str_Buffer..PlusIcon..Str_Buffer..Reagent1Icon
+		
+			if Reagent2Cost > 0 then
+				Str_TotalReagentCost = Str_TotalReagentCost..Str_Buffer..PlusIcon..Str_Buffer..Reagent2Icon
+			end
+			if Reagent3Cost > 0 then
+				Str_TotalReagentCost = Str_TotalReagentCost..Str_Buffer..PlusIcon..Str_Buffer..Reagent3Icon
+			end
+			
+			Str_TotalReagentCost = Str_TotalReagentCost..EqualsIcon..Str_Buffer..Str_TotalCost
+		end
+		
+		self:InscribeCraftSigilstone(tooltip, PotionLink, PotionCount, Str_TotalReagentCost)
+	end
+end
+
+function ddDataDaedra:ProvisionerSigil(self, tooltip)
+	if not tooltip or
+	tooltip == ResultControl then
+		return
+	end
+	ResultControl = tooltip
+	craftingStation = PROVISIONER
+	
+	local RecipeListIndex = craftingStation:GetSelectedRecipeListIndex()
+	local RecipeIndex = craftingStation:GetSelectedRecipeIndex()
+	local RecipeLink = GetRecipeResultItemLink(RecipeListIndex, RecipeIndex, LINK_STYLE_BRACKETS)
+	local RecipeCount = select(3, GetRecipeResultItemInfo(RecipeListIndex, RecipeIndex))
+	
+	local MatIndex1 = craftingStation.ingredientRows[1].control.ingredientIndex
+	local MatLink1, MatIcon1, MatKeyedItem1	
+	local MatCost1 = 0
+
+	if MatIndex1 then
+		MatLink1 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex1, LINK_STYLE_BRACKETS)
+		MatIcon1 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex1)), 28, 28)
+		MatKeyedItem1 = GetKeyedItem(MatLink1)
+		MatCost1 = 0
+				
+		if MatKeyedItem1 and
+		MatKeyedItem1.wAvg ~= 0 then
+			MatCost1 = MatKeyedItem1.wAvg
+		end
+	end
+		
+	local MatIndex2 = craftingStation.ingredientRows[2].control.ingredientIndex
+	local MatLink2, MatIcon2, MatKeyedItem2
+	local MatCost2 = 0
+
+	if MatIndex2 then
+		MatLink2 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex2, LINK_STYLE_BRACKETS)
+		MatIcon2 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex2)), 28, 28)
+		MatKeyedItem2 = GetKeyedItem(MatLink2)
+		MatCost2 = 0
+				
+		if MatKeyedItem2 and
+		MatKeyedItem2.wAvg ~= 0 then
+			MatCost2 = MatKeyedItem2.wAvg
+		end
+	end
+		
+	local MatIndex3 = craftingStation.ingredientRows[3].control.ingredientIndex
+	local MatLink3, MatIcon3, MatKeyedItem3	
+	local MatCost3 = 0
+
+	if MatIndex3 then
+		MatLink3 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex3, LINK_STYLE_BRACKETS)
+		MatIcon3 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex3)), 28, 28)
+		MatKeyedItem3 = GetKeyedItem(MatLink3)
+		MatCost3 = 0
+				
+		if MatKeyedItem3 and
+		MatKeyedItem3.wAvg ~= 0 then
+			MatCost3 = MatKeyedItem3.wAvg
+		end
+	end
+		
+	local MatIndex4 = craftingStation.ingredientRows[4].control.ingredientIndex
+	local MatLink4, MatIcon4, MatKeyedItem4	
+	local MatCost4 = 0
+
+	if MatIndex4 then
+		MatLink4 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex4, LINK_STYLE_BRACKETS)
+		MatIcon4 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex4)), 28, 28)
+		MatKeyedItem4 = GetKeyedItem(MatLink4)
+		MatCost4 = 0
+				
+		if MatKeyedItem4 and
+		MatKeyedItem4.wAvg ~= 0 then
+			MatCost4 = MatKeyedItem4.wAvg
+		end
+	end
+		
+	local MatIndex5 = craftingStation.ingredientRows[5].control.ingredientIndex
+	local MatLink5, MatIcon5, MatKeyedItem5	
+	local MatCost5 = 0
+
+	if MatIndex5 then
+		MatLink5 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex5, LINK_STYLE_BRACKETS)
+		MatIcon5 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex5)), 28, 28)
+		MatKeyedItem5 = GetKeyedItem(MatLink5)
+		MatCost5 = 0
+				
+		if MatKeyedItem5 and
+		MatKeyedItem5.wAvg ~= 0 then
+			MatCost5 = MatKeyedItem5.wAvg
+		end
+	end
+		
+	local TotalCost = LIB_LOG:Round(MatCost1 + MatCost2 + MatCost3 + MatCost4 + MatCost5)
+	
+	if TotalCost ~= 0 then
+		local Str_TotalIngredientCost = ""
+		local Str_Buffer = " "
+		local GoldIcon = zo_iconFormat("esoui/art/currency/currency_gold.dds", 20, 20)
+		local PlusIcon = zo_iconFormat("esoui/art/progression/addpoints_up.dds", 32, 32)
+		local EqualsIcon = zo_iconFormat("/esoui/art/progression/progression_tabicon_passive_inactive.dds", 32, 32)
+		local Str_TotalCost = zo_strformat(GetString(DD_TOOLTIP_CRAFTING_WAVG), ZO_CommaDelimitNumber(TotalCost), GoldIcon)
+		
+		if MatCost1 > 0 then
+			Str_TotalIngredientCost = MatIcon1
+		end
+		if MatCost2 > 0 then
+			Str_TotalIngredientCost = Str_TotalIngredientCost..Str_Buffer..PlusIcon..Str_Buffer..MatIcon2
+		end
+		if MatCost3 > 0 then
+			Str_TotalIngredientCost = Str_TotalIngredientCost..Str_Buffer..PlusIcon..Str_Buffer..MatIcon3
+		end
+		if MatCost4 > 0 then
+			Str_TotalIngredientCost = Str_TotalIngredientCost..Str_Buffer..PlusIcon..Str_Buffer..MatIcon4
+		end
+		if MatCost5 > 0 then
+			Str_TotalIngredientCost = Str_TotalIngredientCost..Str_Buffer..PlusIcon..Str_Buffer..MatIcon5
+		end
+		Str_TotalIngredientCost = Str_TotalIngredientCost..Str_Buffer..EqualsIcon..Str_Buffer..Str_TotalCost
+		
+		self:InscribeCraftSigilstone(tooltip, RecipeLink, RecipeCount, Str_TotalIngredientCost)
+	end
+end
+
+function ddDataDaedra:EnchantingSigil(self, tooltip)
+	if not tooltip or
+	tooltip == ResultControl then
+		return
+	end
+	ResultControl = tooltip
+	craftingStation = ENCHANTING
+	
+	local EnchantingResultItemLink = GetEnchantingResultingItemLink(craftingStation:GetAllCraftingBagAndSlots())
+	
+	local RunePotencySlot = ZO_EnchantingTopLevelRuneSlotContainerPotencyRune
+	local RunePotencyItemLink = GetItemLink(craftingStation.runeSlots[1]:GetBagAndSlot())
+	local RunePotencyKeyedItem = GetKeyedItem(RunePotencyItemLink)
+	local RunePotencyIcon = zo_iconFormat(GetItemInfo(craftingStation.runeSlots[3]:GetBagAndSlot()), 28, 28)
+	local RunePotencyCost = 0
+	local RunePotencyName = GetItemLinkEnchantingRuneName(RunePotencyItemLink)
+	
+	if RunePotencyKeyedItem and
+	RunePotencyKeyedItem.wAvg ~= 0 then
+		RunePotencyCost = RunePotencyKeyedItem.wAvg
+	end
+
+	local RuneEssenceSlot = ZO_EnchantingTopLevelRuneSlotContainerEssenceRune
+	local RuneEssenceItemLink = GetItemLink(RuneEssenceSlot.bagId, RuneEssenceSlot.slotIndex)
+	local RuneEssenceKeyedItem = GetKeyedItem(RuneEssenceItemLink)
+	local RuneEssenceIcon = zo_iconFormat(GetItemInfo(RuneEssenceSlot.bagId, RuneEssenceSlot.slotIndex), 28, 28)
+	local RuneEssenceCost = 0
+	local RuneEssenceName = GetItemLinkEnchantingRuneName(RuneEssenceItemLink)
+	
+	if RuneEssenceKeyedItem and
+	RuneEssenceKeyedItem.wAvg ~= 0 then
+		RuneEssenceCost = RuneEssenceKeyedItem.wAvg
+	end
+	
+	local RuneAspectSlot = ZO_EnchantingTopLevelRuneSlotContainerAspectRune
+	local RuneAspectItemLink = GetItemLink(RuneAspectSlot.bagId, RuneAspectSlot.slotIndex)
+	local RuneAspectKeyedItem = GetKeyedItem(RuneAspectItemLink)
+	local RuneAspectIcon = zo_iconFormat(GetItemInfo(RuneAspectSlot.bagId, RuneAspectSlot.slotIndex), 28, 28)
+	local RuneAspectCost = 0
+	local RuneAspectName = GetItemLinkEnchantingRuneName(RuneAspectItemLink)	
+	
+	if RuneAspectKeyedItem and
+	RuneAspectKeyedItem.wAvg ~= 0 then
+		RuneAspectCost = RuneAspectKeyedItem.wAvg
+	end
+	
+	local TotalCost = LIB_LOG:Round(RunePotencyCost + RuneEssenceCost + RuneAspectCost)
+
+	if TotalCost ~= 0 then
+		local Str_TotaGlyphCost = ""
+		local Str_Buffer = " "
+		local GoldIcon = zo_iconFormat("esoui/art/currency/currency_gold.dds", 20, 20)
+		local PlusIcon = zo_iconFormat("esoui/art/progression/addpoints_up.dds", 32, 32)
+		local EqualsIcon = zo_iconFormat("/esoui/art/progression/progression_tabicon_passive_inactive.dds", 32, 32)
+		local Str_TotalCost = zo_strformat(GetString(DD_TOOLTIP_CRAFTING_WAVG), ZO_CommaDelimitNumber(TotalCost), GoldIcon)
+		Str_TotaGlyphCost = RunePotencyIcon..Str_Buffer..PlusIcon..Str_Buffer..RuneEssenceIcon
+		Str_TotaGlyphCost = Str_TotaGlyphCost..Str_Buffer..PlusIcon..Str_Buffer..RuneAspectIcon
+		Str_TotaGlyphCost = Str_TotaGlyphCost..Str_Buffer..EqualsIcon..Str_Buffer..Str_TotalCost
+		
+		self:InscribeCraftSigilstone(tooltip, EnchantingResultItemLink, 1, Str_TotaGlyphCost)
+	end
+end
+
+function ddDataDaedra:ImprovementSigil(self, tooltip)
+	if not tooltip or
+	tooltip == ResultControl then
+		return
+	end
+	ResultControl = tooltip
+	local Panel = SMITHING.improvementPanel
+	
+	local ImproveResultItemLink = GetSmithingImprovedItemLink(Panel:GetCurrentImprovementParams(), LINK_STYLE_BRACKETS)
+	local BoosterLink = GetSmithingImprovementItemLink(GetCraftingInteractionType(), Panel.boosterSlot.index, LINK_STYLE_BRACKETS)
+
+	local BoosterKeyedItem = GetKeyedItem(BoosterLink)
+	local BoosterCount = Panel.spinner.value
+	local BoosterCost = 0
+	
+	if BoosterKeyedItem and
+	BoosterKeyedItem.wAvg ~= 0 then
+		BoosterCost = BoosterKeyedItem.wAvg * BoosterCount
+	end
+
+	local TotalCost = LIB_LOG:Round(BoosterCost)
+	
+	if TotalCost ~= 0 then
+		local Str_TotalImprovementCost = ""
+		local Str_Buffer = " "
+		local GoldIcon = zo_iconFormat("esoui/art/currency/currency_gold.dds", 20, 20)
+		local PlusIcon = zo_iconFormat("esoui/art/progression/addpoints_up.dds", 32, 32)
+		local EqualsIcon = zo_iconFormat("/esoui/art/progression/progression_tabicon_passive_inactive.dds", 32, 32)
+		local Str_TotalCost = zo_strformat(GetString(DD_TOOLTIP_CRAFTING_WAVG), ZO_CommaDelimitNumber(TotalCost), GoldIcon)
+		local BoosterIcon = BoosterCount..zo_iconFormat(ZO_SmithingTopLevelImprovementPanelSlotContainerBoosterSlotIcon:GetTextureFileName(), 28, 28)		
+		Str_TotalImprovementCost = BoosterIcon..Str_Buffer..EqualsIcon..Str_Buffer..Str_TotalCost
+		
+		ZO_SmithingTopLevelImprovementPanelResultTooltip:SetHidden(false)
+		ZO_SmithingTopLevelImprovementPanelResultTooltip:ClearLines()
+		Panel:SetupResultTooltip(Panel:GetCurrentImprovementParams())
+		self:InscribeCraftSigilstone(tooltip, ImproveResultItemLink, 1, Str_TotalImprovementCost)
+	end	
+end
+
+function ddDataDaedra:CreationSigil(self, tooltip)
+	if not tooltip or
+	tooltip == ResultControl then
+		return
+	end
+	ResultControl = tooltip
+	
+	local Panel = SMITHING.creationPanel
+	local MatList = Panel.materialList.selectedData
+	local MatCount = Panel.materialQuantitySpinner.value
+	local StyleList = Panel.styleList.selectedData
+	local TraitList = Panel.traitList.selectedData
+	
+		
+	local MatItemLink = GetSmithingPatternMaterialItemLink(MatList.patternIndex, MatList.materialIndex, LINK_STYLE_BRACKETS)
+	local MatKeyedItem = GetKeyedItem(MatItemLink)
+	local MatCost = 0
+	
+	if MatKeyedItem and
+	MatKeyedItem.wAvg ~= 0 then
+		MatCost = MatKeyedItem.wAvg * MatCount
+	end
+	
+	local StyleItemLink = GetSmithingStyleItemLink(StyleList.styleIndex, LINK_STYLE_BRACKETS)
+	local StyleKeyedItem = GetKeyedItem(StyleItemLink)
+	local StyleCost = 0
+	
+	if StyleKeyedItem and
+	StyleKeyedItem.wAvg ~= 0 then
+		StyleCost = StyleKeyedItem.wAvg
+	end
+	
+	local TraitItemLink = GetSmithingTraitItemLink(TraitList.traitIndex, LINK_STYLE_BRACKETS)
+	local TraitKeyedItem = GetKeyedItem(TraitItemLink)
+	local TraitCost = 0
+	
+	if TraitKeyedItem and
+	TraitKeyedItem.wAvg ~= 0 then
+		TraitCost = TraitKeyedItem.wAvg
+	end
+	
+	local ResultItemLink = GetSmithingPatternResultLink(MatList.patternIndex, MatList.materialIndex, MatCount, StyleList.styleIndex, TraitList.traitIndex, LINK_STYLE_BRACKETS)	
+	local TotalCost = LIB_LOG:Round(MatCost + StyleCost + TraitCost)
+	
+	if TotalCost ~= 0 then
+		local Str_TotalSmithingCost = ""
+		local Str_Buffer = " "
+		local MatIcon = MatCount..zo_iconFormat(MatList.icon, 28, 28)
+		local StyleIcon = zo_iconFormat(StyleList.icon, 28, 28)
+		local TraitIcon = zo_iconFormat(TraitList.icon, 28, 28)
+		local GoldIcon = zo_iconFormat("esoui/art/currency/currency_gold.dds", 20, 20)
+		local PlusIcon = zo_iconFormat("esoui/art/progression/addpoints_up.dds", 32, 32)
+		local EqualsIcon = zo_iconFormat("/esoui/art/progression/progression_tabicon_passive_inactive.dds", 32, 32)
+		local Str_TotalCost = zo_strformat(GetString(DD_TOOLTIP_CRAFTING_WAVG), ZO_CommaDelimitNumber(TotalCost), GoldIcon)
+		Str_TotalSmithingCost = MatIcon..Str_Buffer..PlusIcon..Str_Buffer..StyleIcon
+		
+		if TraitCost ~= 0 then
+			Str_TotalSmithingCost = Str_TotalSmithingCost..Str_Buffer..PlusIcon..Str_Buffer..TraitIcon
+		end
+		
+		Str_TotalSmithingCost = Str_TotalSmithingCost..Str_Buffer..EqualsIcon..Str_Buffer..Str_TotalCost
+		
+		self:InscribeCraftSigilstone(tooltip, ResultItemLink, 1, Str_TotalSmithingCost)
+	end
+end
+
+function ddDataDaedra:SigilDesign(tooltip)
+	local MoC = moc()
+	local TH = TRADING_HOUSE
+	
+	if not tooltip or
+	not MoC.dataEntry or 
+	not MoC.dataEntry.data or
+	tooltip == TooltipControl then 
+		return
+	end
+	
+	TooltipControl = tooltip
+	local Row = MoC.dataEntry.data
+	local Index = Row.slotIndex
+	local Stack = Row.stackCount
+	local ItemLink
+
+	if not tooltip or 
+	tooltip:GetOwningWindow():GetName() == "ZO_SmithingTopLevelCreationPanel" or
+	tooltip:GetOwningWindow():GetName() == "ZO_ListDialog1" or
+	tooltip:GetOwningWindow():GetName() == "ZO_InteractWindow" or		-- GetQuestRewardItemLink
+	tooltip:GetOwningWindow():GetName() == "ZO_QuickSlotCircle" or																	
+	tooltip:GetOwningWindow():GetName() == "ZO_StablePanel" then																		
+		return
+	end
+	
+	if Row then
+		if Row.lootId then
+			ItemLink = GetLootItemLink(Row.lootId)
+			Stack = Row.count
+			self:InscribeItemSigilstone(tooltip, ItemLink, Stack)
+			return
+		
+		elseif Row.index then
+			if Row.craftingType then
+				ItemLink = GetSmithingImprovementItemLink(Row.craftingType, Row.index)
+			elseif tooltip:GetOwningWindow():GetName() == "ZO_StoreWindow" then
+				ItemLink = GetStoreItemLink(Row.index)
+			elseif tooltip:GetOwningWindow():GetName() == "ZO_BuyBack" then
+				ItemLink = GetBuybackItemLink(Row.index)
+			elseif tooltip:GetOwningWindow():GetName() == "ZO_QuestReward" then
+				ItemLink = GetQuestRewardItemLink(Row.index)
+			end
+			
+			self:InscribeItemSigilstone(tooltip, ItemLink, 1)
+			return
+		
+		elseif TRADING_HOUSE:IsAtTradingHouse() and 
+		TH:IsInSearchMode() and
+		Row.timeRemaining and 
+		Row.timeRemaining > 0 then
+			ItemLink = GetTradingHouseSearchResultItemLink(Row.slotIndex)
+			self:InscribeItemSigilstone(tooltip, ItemLink, Stack)
+			return
+
+		elseif TRADING_HOUSE:IsAtTradingHouse() and
+		Row.bagId then 
+			ItemLink = GetItemLink(Row.bagId, Row.slotIndex)
+			self:InscribeItemSigilstone(tooltip, ItemLink, Stack)
+			return
+			
+		elseif TRADING_HOUSE:IsAtTradingHouse() and
+		TH:IsInListingsMode() then
+			ItemLink = GetTradingHouseListingItemLink(Row.slotIndex)
+			self:InscribeItemSigilstone(tooltip, ItemLink, Stack)
+			return
+			
+		elseif Row.bagId then 
+			ItemLink = GetItemLink(Row.bagId, Row.slotIndex)
+			
+			if tooltip ~= ComparativeTooltip1 or ComparativeTooltip2 then								-- They inherit from ItemTooltip, so we have to rule them out specifically
+				self:InscribeItemSigilstone(tooltip, ItemLink, Stack)
+				return
+			end
+
+		else
+			return
+		end
+	end
+end
 
 
 --------------------------------------------------------------------------------------------------
@@ -525,12 +1298,12 @@ function ddDataDaedra:TwilightMaiden(guildId)
 	local lastSale = DATACAIRN.lastSale[guildName] or 1
 	
 	for i = 1, StoreEvents, 1 do
-		local EventType, secsSinceSale, Buyer, Seller, Quantity, ItemLink, Price, Tax = GetGuildEventInfo(guildId, GUILD_HISTORY_STORE, i)
+		local EventType, secsSinceSale, Buyer, Seller, Quantity, itemLink, Price, Tax = GetGuildEventInfo(guildId, GUILD_HISTORY_STORE, i)
 		local timeStamp = GetTimeStamp() - secsSinceSale
 
 		if EventType == GUILD_EVENT_ITEM_SOLD and 
 		timeStamp > lastScan and 
-		ItemLink ~= "" then
+		itemLink ~= "" then
 			if not lastSale or 
 			timeStamp > lastSale then
 				DATACAIRN.lastSale[guildName] = (timeStamp - secsSinceSale)
@@ -540,12 +1313,12 @@ function ddDataDaedra:TwilightMaiden(guildId)
 			Quantity 	= tonumber(Quantity)
 			Price 		= tonumber(Price)
 			
-			local Quality		= parseItemLinkQuality(ItemLink)
-			local SetItem 		= parseItemLinkSetItem(ItemLink)
-			local Trait			= parseItemLinkTrait(ItemLink)
-			local Level, VetRank = parseItemLinkLevel(ItemLink)
-			local ItemId		= parseLinkValue(ItemLink, 3)
-			local EnchtId		= parseLinkValue(ItemLink, 6)
+			local Quality		= parseItemLinkQuality(itemLink)
+			local SetItem 		= parseItemLinkSetItem(itemLink)
+			local Trait			= parseItemLinkTrait(itemLink)
+			local Level, VetRank = parseItemLinkLevel(itemLink)
+			local ItemId		= parseLinkValue(itemLink, 3)
+			local EnchtId		= parseLinkValue(itemLink, 6)
 			local Element		= (Price / Quantity) * Quantity
 			local Tier1, Tier2, Tier3, Tier4, Tier5, Values
 
@@ -642,17 +1415,18 @@ end
 function ddDataDaedra:checkHistory() 
 	local DATACAIRN = self.dataCairn
 	local numGuilds = GetNumGuilds()
+	local scanInterval = self.dataCairn.codex.cInterval.getFunc()
 
 	self.historyScan = true
 	
 	if numGuilds >= 1 then
 		for guildId = 1, numGuilds, 1 do
 			local guildName = GetGuildName(guildId)
-			local numEvents = GetNumGuildEvents(guildId, GUILD_HISTORY_STORE) -- /script d(GetNumGuildEvents(1, GUILD_HISTORY_STORE))
+			local numEvents = GetNumGuildEvents(guildId, GUILD_HISTORY_STORE)
 			local lastScan = DATACAIRN.lastScan[guildName]
---			self:DisplayMsg(numEvents, true)
+
 			RequestGuildHistoryCategoryNewest(guildId, GUILD_HISTORY_STORE)
---			self:DisplayMsg(numEvents, true)
+
 			if numEvents > 0 then
 				local secsSinceSale = select(2, GetGuildEventInfo(guildId, GUILD_HISTORY_STORE, numEvents))
 
@@ -660,7 +1434,7 @@ function ddDataDaedra:checkHistory()
 				(not lastScan or ((GetTimeStamp() - secsSinceSale) > lastScan)) then
 					self:DisplayMsg("Requesting guild store history page for " .. guildName, true)
 					RequestGuildHistoryCategoryOlder(guildId, GUILD_HISTORY_STORE)
-					zo_callLater(function() self:checkHistory() end, 3000)
+					zo_callLater(function() self:checkHistory() end, scanInterval * 1000)
 					return
 				end
 			end
@@ -671,35 +1445,36 @@ function ddDataDaedra:checkHistory()
 --	self:DisplayMsg("Guild history scan complete.", true)
 end
 
+
 function ddDataDaedra:hooks()
---	ZO_PreHook(TRADING_HOUSE, "PostPendingItem", function() self:SavePrice() end)
+	ZO_PreHook(TRADING_HOUSE, "PostPendingItem", function() SavePrice() end)
 --	ZO_PreHook("ZO_InventorySlot_ShowContextMenu", function(rowControl) SlotControl = rowControl; self:SlotControlStatsToChat() end)
 	
---	ZO_PreHookHandler(ItemTooltip, 	'OnUpdate',		function(tooltip) self:SigilDesign(tooltip) end)
---	ZO_PreHookHandler(ItemTooltip, 	'OnCleared',	function() TooltipControl = nil end)
---	ZO_PreHookHandler(PopupTooltip, 'OnUpdate',		function(tooltip) self:InscribePopupSigilstone(tooltip) end)
---	ZO_PreHookHandler(PopupTooltip,	'OnCleared',	function() PopupControl = nil end)
+	ZO_PreHookHandler(ItemTooltip, 	'OnUpdate',		function(tooltip) self:SigilDesign(tooltip) end)
+	ZO_PreHookHandler(ItemTooltip, 	'OnCleared',	function() TooltipControl = nil end)
+	ZO_PreHookHandler(PopupTooltip, 'OnUpdate',		function(tooltip) self:InscribePopupSigilstone(tooltip) end)
+	ZO_PreHookHandler(PopupTooltip,	'OnCleared',	function() PopupControl = nil end)
 	
 --	if self.dataCairn.codex.cMatMiser.getFunc() then
---		ZO_PreHookHandler(ZO_SmithingTopLevelCreationPanelResultTooltip, "OnUpdate", function(tooltip) self:CreationSigil(self, tooltip) end)
---		ZO_PreHookHandler(ZO_SmithingTopLevelCreationPanelResultTooltip, "OnCleared", function() ResultControl = nil end)
+		ZO_PreHookHandler(ZO_SmithingTopLevelCreationPanelResultTooltip, "OnUpdate", function(tooltip) self:CreationSigil(self, tooltip) end)
+		ZO_PreHookHandler(ZO_SmithingTopLevelCreationPanelResultTooltip, "OnCleared", function() ResultControl = nil end)
 		
---		ZO_PreHookHandler(ZO_SmithingTopLevelImprovementPanelResultTooltip, "OnUpdate", function(tooltip) self:ImprovementSigil(self, tooltip) end)
---		ZO_PreHookHandler(ZO_SmithingTopLevelImprovementPanelResultTooltip, "OnCleared", function() ResultControl = nil end)
+		ZO_PreHookHandler(ZO_SmithingTopLevelImprovementPanelResultTooltip, "OnUpdate", function(tooltip) self:ImprovementSigil(self, tooltip) end)
+		ZO_PreHookHandler(ZO_SmithingTopLevelImprovementPanelResultTooltip, "OnCleared", function() ResultControl = nil end)
 		
---		ZO_PreHookHandler(ZO_EnchantingTopLevelTooltip, "OnUpdate", function(tooltip) self:EnchantingSigil(self, tooltip) end)
---		ZO_PreHookHandler(ZO_EnchantingTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
+		ZO_PreHookHandler(ZO_EnchantingTopLevelTooltip, "OnUpdate", function(tooltip) self:EnchantingSigil(self, tooltip) end)
+		ZO_PreHookHandler(ZO_EnchantingTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
 		
---		ZO_PreHookHandler(ZO_ProvisionerTopLevelTooltip, "OnUpdate", function(tooltip) self:ProvisionerSigil(self, tooltip) end)
---		ZO_PreHookHandler(ZO_ProvisionerTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
+		ZO_PreHookHandler(ZO_ProvisionerTopLevelTooltip, "OnUpdate", function(tooltip) self:ProvisionerSigil(self, tooltip) end)
+		ZO_PreHookHandler(ZO_ProvisionerTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
 		
---		ZO_PreHookHandler(ZO_AlchemyTopLevelTooltip, "OnUpdate", function(tooltip) self:AlchemySigil(self, tooltip) end)
---		ZO_PreHookHandler(ZO_AlchemyTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
+		ZO_PreHookHandler(ZO_AlchemyTopLevelTooltip, "OnUpdate", function(tooltip) self:AlchemySigil(self, tooltip) end)
+		ZO_PreHookHandler(ZO_AlchemyTopLevelTooltip, "OnCleared", function() ResultControl = nil end)
 --	end
 	
 --	ZO_LinkHandler_OnLinkMouseUp = function(itemLink, button, control) self:ChatLinkStatsToChat(itemLink, button, control) end
---	LINK_HANDLER:RegisterCallback(LINK_HANDLER.LINK_CLICKED_EVENT, function() self:InscribePopupSigilstone(self, PopupTooltip) end)	
---	SMITHING.improvementPanel.spinner:RegisterCallback("OnValueChanged", function(value) ResultControl = nil self:ImprovementSigil(self, ZO_SmithingTopLevelImprovementPanelResultTooltip) end)
+	LINK_HANDLER:RegisterCallback(LINK_HANDLER.LINK_CLICKED_EVENT, function() self:InscribePopupSigilstone(self, PopupTooltip) end)	
+	SMITHING.improvementPanel.spinner:RegisterCallback("OnValueChanged", function(value) ResultControl = nil self:ImprovementSigil(self, ZO_SmithingTopLevelImprovementPanelResultTooltip) end)
 --	PostFunc = TRADING_HOUSE.SetupPendingPost
 --	TRADING_HOUSE.SetupPendingPost = function() self:PendListing() end
 end
@@ -717,7 +1492,7 @@ function ddDataDaedra:liminalBridge()
 	
 	self:DisplayMsg(GetString(DD_ONLOAD), false)
 	self.historyScan = true
-	zo_callLater(function() self:checkHistory() end, 5000)
+	zo_callLater(function() self:checkHistory() end, scanInterval * 1000)
 	EVENT_MANAGER:RegisterForUpdate(self.name, (scanInterval * 60 * 1000), function() self:twilightSummons() end)
 end
 
