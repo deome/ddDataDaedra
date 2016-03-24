@@ -9,7 +9,7 @@
 ## Version 2.0x
 
 ## SavedVariables: ddDataCairn
-## OptionalDependsOn: LibAddonMenu-2.0 LibLogos AwesomeGuildStore
+## OptionalDependsOn: LibAddonMenu-2.0 LibLogos 
 
 Lib\LibStub\LibStub.lua
 
