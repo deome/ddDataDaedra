@@ -512,7 +512,7 @@ function CODEX.cSaveSalePrice:init()
 	self.tooltip = GetString(DD_TASKMASTER_SAVE_SALE_PRICE_TIP)
 	self.width = "full"
 	
-	self.default = true
+	self.default = false
 	self.getFunc = function() if self.value == nil then self.value = self.default end return self.value end
 	self.setFunc = function(value) self.value = value end
 	return self
