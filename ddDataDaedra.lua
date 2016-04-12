@@ -90,6 +90,7 @@ ddDataDaedra = {
 	["displayMsg"]					= function() end,	
 	["hooks"]						= function() end,
 	["liminalBridge"] 				= function() end,
+	["getKeyedItem"] 				= function() end,
 }
 
 
@@ -274,42 +275,6 @@ local function getItemLinkFromSlotControl(slotControl)
 		end
 	else
 		return ""
-	end
-end
-
-local function getKeyedItem(itemLink)
-	local codex			= ddDataDaedra.dataCairn.codex
-	local PRICES		= ddDataDaedra.dataCairn.prices
-	local ItemId		= parseLinkValue(itemLink, 3)
-	local EnchtId		= parseLinkValue(itemLink, 6)
-	local Trait			= parseItemLinkTrait(itemLink)
-	local Level, VetRank = parseItemLinkLevel(itemLink)
-	local Quality		= parseItemLinkQuality(itemLink)
-	
-	if PRICES[ItemId] then
-		if PRICES[ItemId][Trait] then
-			if PRICES[ItemId][Trait][Quality] then
-				if PRICES[ItemId][Trait][Quality][Level] then
-					if PRICES[ItemId][Trait][Quality][Level][VetRank] then
-						if PRICES[ItemId][Trait][Quality][Level][VetRank][EnchtId] then
-							return PRICES[ItemId][Trait][Quality][Level][VetRank][EnchtId]
-						end
-					end
-				end
-			end
-		end
-	end
-
-	return nil
-end
-
-local function isKeyedItem(itemLink)
-	local KeyedItem = getKeyedItem(itemLink)
-	
-	if not KeyedItem then 
-		return false 
-	else 
-		return true 
 	end
 end
 
@@ -1280,6 +1245,41 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
+function ddDataDaedra:getKeyedItem(itemLink)
+	local codex			= ddDataDaedra.dataCairn.codex
+	local PRICES		= ddDataDaedra.dataCairn.prices
+	local ItemId		= parseLinkValue(itemLink, 3)
+	local EnchtId		= parseLinkValue(itemLink, 6)
+	local Trait			= parseItemLinkTrait(itemLink)
+	local Level, VetRank = parseItemLinkLevel(itemLink)
+	local Quality		= parseItemLinkQuality(itemLink)
+	
+	if PRICES[ItemId] then
+		if PRICES[ItemId][Trait] then
+			if PRICES[ItemId][Trait][Quality] then
+				if PRICES[ItemId][Trait][Quality][Level] then
+					if PRICES[ItemId][Trait][Quality][Level][VetRank] then
+						if PRICES[ItemId][Trait][Quality][Level][VetRank][EnchtId] then
+							return PRICES[ItemId][Trait][Quality][Level][VetRank][EnchtId]
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return nil
+end
+
+function ddDataDaedra:isKeyedItem(itemLink)
+	local KeyedItem = self:getKeyedItem(itemLink)
+	
+	if not KeyedItem then 
+		return false 
+	else 
+		return true 
+	end
+end
 
 function ddDataDaedra:displayMsg(msgString, boolDebug)
 	local CODEX	= self.dataCairn.codex
