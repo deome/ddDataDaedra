@@ -1,12 +1,12 @@
 --------------------------------------------------------------------------------------------------
 -----------------------------------------   DataDaedra   -----------------------------------------
 ---------------------------   by Deome (@deome) - heydeome@gmail.com   ---------------------------
-local									VERSION = "1.9"											--
+local									VERSION = "2.0.0"										--
 --																								--
 --																								--
 ---------------------------------------   Deome's License   --------------------------------------
 --																								--
--- 		Copyright (c) 2014, 2015, 2016 D. Deome (@deome) - heydeome@gmail.com					--
+-- 		Copyright (c) 2014-2017 D. Deome (@deome) - heydeome@gmail.com							--
 --																								--
 -- 		This software is provided 'as-is', without any express or implied						--
 -- 		warranty. In no event will the author(s) be held liable for any damages					--
