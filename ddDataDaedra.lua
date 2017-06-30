@@ -286,7 +286,7 @@ local function pendListing()
 	if TRADING_HOUSE.m_pendingItemSlot and 
 	(twAvgSalePrice or tSaveSalePrice) then
 		local ItemLink 		= GetItemLink(BAG_BACKPACK, TRADING_HOUSE.m_pendingItemSlot)
-		local KeyedItem 	= getKeyedItem(ItemLink)
+		local KeyedItem 	= ddDataDaedra:getKeyedItem(ItemLink)
 		local Stack 		= select(2, GetItemInfo(BAG_BACKPACK, TRADING_HOUSE.m_pendingItemSlot)) or 1
 		
 		if KeyedItem and
@@ -317,7 +317,7 @@ local function savePrice()
 	local tSaveSalePrice	= CODEX.cSaveSalePrice.getFunc()
 	local itemLink 			= GetItemLink(BAG_BACKPACK, TRADING_HOUSE.m_pendingItemSlot)
 	local Stack 			= select(2, GetItemInfo(BAG_BACKPACK, TRADING_HOUSE.m_pendingItemSlot))
-	local KeyedItem			= getKeyedItem(itemLink)
+	local KeyedItem			= ddDataDaedra:getKeyedItem(itemLink)
 	local PostPrice 		= LIB_LOG:Round(LIB_LOG:RoundTo100s(TRADING_HOUSE.m_invoiceSellPrice.sellPrice / Stack))
 	
 	if tSaveSalePrice then
@@ -642,7 +642,7 @@ function ddDataDaedra:inscribePopupSigilstone(tooltip)
 	if tooltip == PopupControl then return end
 	PopupControl = tooltip
 
-	local ResultKeyedItem 	= getKeyedItem(PopupControl.lastLink)
+	local ResultKeyedItem 	= ddDataDaedra:getKeyedItem(PopupControl.lastLink)
 	
 	if ResultKeyedItem and
 	ResultKeyedItem.wAvg and
@@ -664,7 +664,7 @@ function ddDataDaedra:inscribeItemSigilstone(tooltip, itemLink, stack)
 		stack = 1
 	end
 
-	local ResultKeyedItem = getKeyedItem(itemLink)
+	local ResultKeyedItem = ddDataDaedra:getKeyedItem(itemLink)
 	
 	if ResultKeyedItem and
 	ResultKeyedItem.wAvg and
@@ -677,7 +677,7 @@ end
 
 function ddDataDaedra:inscribeCraftSigilstone(tooltip, resultLink, resultStack, str_TotalCost)
 	if not tooltip then return end
-	local ResultKeyedItem = getKeyedItem(resultLink)
+	local ResultKeyedItem = ddDataDaedra:getKeyedItem(resultLink)
 
 	if not resultStack or 
 	resultStack < 2 then 
@@ -707,7 +707,7 @@ function ddDataDaedra:alchemySigil(self, tooltip)
 	local SolventSlotIndex = craftingStation.solventSlot.slotIndex
 	local SolventItemLink = GetItemLink(SolventBagId, SolventSlotIndex, LINK_STYLE_BRACKETS)
 	local SolventIcon = zo_iconFormat(GetItemLinkInfo(SolventItemLink), 28, 28)
-	local SolventKeyedItem = getKeyedItem(SolventItemLink)
+	local SolventKeyedItem = ddDataDaedra:getKeyedItem(SolventItemLink)
 	local SolventCost = 0
 	
 	if SolventKeyedItem and
@@ -720,7 +720,7 @@ function ddDataDaedra:alchemySigil(self, tooltip)
 	local Reagent1SlotIndex = craftingStation.reagentSlots[1].slotIndex
 	local Reagent1ItemLink = GetItemLink(Reagent1BagId, Reagent1SlotIndex, LINK_STYLE_BRACKETS)
 	local Reagent1Icon = zo_iconFormat(GetItemLinkInfo(Reagent1ItemLink), 28, 28)
-	local Reagent1KeyedItem = getKeyedItem(Reagent1ItemLink)
+	local Reagent1KeyedItem = ddDataDaedra:getKeyedItem(Reagent1ItemLink)
 	local Reagent1Cost = 0
 	
 	if Reagent1KeyedItem and
@@ -733,7 +733,7 @@ function ddDataDaedra:alchemySigil(self, tooltip)
 	local Reagent2SlotIndex = craftingStation.reagentSlots[2].slotIndex
 	local Reagent2ItemLink = GetItemLink(Reagent2BagId, Reagent2SlotIndex, LINK_STYLE_BRACKETS)
 	local Reagent2Icon = zo_iconFormat(GetItemLinkInfo(Reagent2ItemLink), 28, 28)
-	local Reagent2KeyedItem = getKeyedItem(Reagent2ItemLink)
+	local Reagent2KeyedItem = ddDataDaedra:getKeyedItem(Reagent2ItemLink)
 	local Reagent2Cost = 0
 	
 	if Reagent2KeyedItem and
@@ -746,7 +746,7 @@ function ddDataDaedra:alchemySigil(self, tooltip)
 	local Reagent3SlotIndex = craftingStation.reagentSlots[3].slotIndex
 	local Reagent3ItemLink = GetItemLink(Reagent3BagId, Reagent3SlotIndex, LINK_STYLE_BRACKETS)
 	local Reagent3Icon = zo_iconFormat(GetItemLinkInfo(Reagent3ItemLink), 28, 28)
-	local Reagent3KeyedItem = getKeyedItem(Reagent3ItemLink)
+	local Reagent3KeyedItem = ddDataDaedra:getKeyedItem(Reagent3ItemLink)
 	local Reagent3Cost = 0
 	
 	if Reagent3KeyedItem and
@@ -805,7 +805,7 @@ function ddDataDaedra:provisionerSigil(self, tooltip)
 	if MatIndex1 then
 		MatLink1 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex1, LINK_STYLE_BRACKETS)
 		MatIcon1 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex1)), 28, 28)
-		MatKeyedItem1 = getKeyedItem(MatLink1)
+		MatKeyedItem1 = ddDataDaedra:getKeyedItem(MatLink1)
 		MatCost1 = 0
 				
 		if MatKeyedItem1 and
@@ -821,7 +821,7 @@ function ddDataDaedra:provisionerSigil(self, tooltip)
 	if MatIndex2 then
 		MatLink2 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex2, LINK_STYLE_BRACKETS)
 		MatIcon2 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex2)), 28, 28)
-		MatKeyedItem2 = getKeyedItem(MatLink2)
+		MatKeyedItem2 = ddDataDaedra:getKeyedItem(MatLink2)
 		MatCost2 = 0
 				
 		if MatKeyedItem2 and
@@ -837,7 +837,7 @@ function ddDataDaedra:provisionerSigil(self, tooltip)
 	if MatIndex3 then
 		MatLink3 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex3, LINK_STYLE_BRACKETS)
 		MatIcon3 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex3)), 28, 28)
-		MatKeyedItem3 = getKeyedItem(MatLink3)
+		MatKeyedItem3 = ddDataDaedra:getKeyedItem(MatLink3)
 		MatCost3 = 0
 				
 		if MatKeyedItem3 and
@@ -853,7 +853,7 @@ function ddDataDaedra:provisionerSigil(self, tooltip)
 	if MatIndex4 then
 		MatLink4 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex4, LINK_STYLE_BRACKETS)
 		MatIcon4 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex4)), 28, 28)
-		MatKeyedItem4 = getKeyedItem(MatLink4)
+		MatKeyedItem4 = ddDataDaedra:getKeyedItem(MatLink4)
 		MatCost4 = 0
 				
 		if MatKeyedItem4 and
@@ -869,7 +869,7 @@ function ddDataDaedra:provisionerSigil(self, tooltip)
 	if MatIndex5 then
 		MatLink5 = GetRecipeIngredientItemLink(RecipeListIndex, RecipeIndex, MatIndex5, LINK_STYLE_BRACKETS)
 		MatIcon5 = zo_iconFormat(select(2, GetRecipeIngredientItemInfo(RecipeListIndex, RecipeIndex, MatIndex5)), 28, 28)
-		MatKeyedItem5 = getKeyedItem(MatLink5)
+		MatKeyedItem5 = ddDataDaedra:getKeyedItem(MatLink5)
 		MatCost5 = 0
 				
 		if MatKeyedItem5 and
@@ -921,7 +921,7 @@ function ddDataDaedra:enchantingSigil(self, tooltip)
 	
 	local RunePotencySlot = ZO_EnchantingTopLevelRuneSlotContainerPotencyRune
 	local RunePotencyItemLink = GetItemLink(craftingStation.runeSlots[1]:GetBagAndSlot())
-	local RunePotencyKeyedItem = getKeyedItem(RunePotencyItemLink)
+	local RunePotencyKeyedItem = ddDataDaedra:getKeyedItem(RunePotencyItemLink)
 	local RunePotencyIcon = zo_iconFormat(GetItemInfo(craftingStation.runeSlots[3]:GetBagAndSlot()), 28, 28)
 	local RunePotencyCost = 0
 	local RunePotencyName = GetItemLinkEnchantingRuneName(RunePotencyItemLink)
@@ -933,7 +933,7 @@ function ddDataDaedra:enchantingSigil(self, tooltip)
 
 	local RuneEssenceSlot = ZO_EnchantingTopLevelRuneSlotContainerEssenceRune
 	local RuneEssenceItemLink = GetItemLink(RuneEssenceSlot.bagId, RuneEssenceSlot.slotIndex)
-	local RuneEssenceKeyedItem = getKeyedItem(RuneEssenceItemLink)
+	local RuneEssenceKeyedItem = ddDataDaedra:getKeyedItem(RuneEssenceItemLink)
 	local RuneEssenceIcon = zo_iconFormat(GetItemInfo(RuneEssenceSlot.bagId, RuneEssenceSlot.slotIndex), 28, 28)
 	local RuneEssenceCost = 0
 	local RuneEssenceName = GetItemLinkEnchantingRuneName(RuneEssenceItemLink)
@@ -945,7 +945,7 @@ function ddDataDaedra:enchantingSigil(self, tooltip)
 	
 	local RuneAspectSlot = ZO_EnchantingTopLevelRuneSlotContainerAspectRune
 	local RuneAspectItemLink = GetItemLink(RuneAspectSlot.bagId, RuneAspectSlot.slotIndex)
-	local RuneAspectKeyedItem = getKeyedItem(RuneAspectItemLink)
+	local RuneAspectKeyedItem = ddDataDaedra:getKeyedItem(RuneAspectItemLink)
 	local RuneAspectIcon = zo_iconFormat(GetItemInfo(RuneAspectSlot.bagId, RuneAspectSlot.slotIndex), 28, 28)
 	local RuneAspectCost = 0
 	local RuneAspectName = GetItemLinkEnchantingRuneName(RuneAspectItemLink)	
@@ -983,7 +983,7 @@ function ddDataDaedra:improvementSigil(self, tooltip)
 	local ImproveResultItemLink = GetSmithingImprovedItemLink(Panel:GetCurrentImprovementParams(), LINK_STYLE_BRACKETS)
 	local BoosterLink = GetSmithingImprovementItemLink(GetCraftingInteractionType(), Panel.boosterSlot.index, LINK_STYLE_BRACKETS)
 
-	local BoosterKeyedItem = getKeyedItem(BoosterLink)
+	local BoosterKeyedItem = ddDataDaedra:getKeyedItem(BoosterLink)
 	local BoosterCount = Panel.spinner.value
 	local BoosterCost = 0
 	
@@ -1026,7 +1026,7 @@ function ddDataDaedra:creationSigil(self, tooltip)
 	
 		
 	local MatItemLink = GetSmithingPatternMaterialItemLink(MatList.patternIndex, MatList.materialIndex, LINK_STYLE_BRACKETS)
-	local MatKeyedItem = getKeyedItem(MatItemLink)
+	local MatKeyedItem = ddDataDaedra:getKeyedItem(MatItemLink)
 	local MatCost = 0
 	
 	if MatKeyedItem and
@@ -1035,7 +1035,7 @@ function ddDataDaedra:creationSigil(self, tooltip)
 	end
 	
 	local StyleItemLink = GetSmithingStyleItemLink(StyleList.styleIndex, LINK_STYLE_BRACKETS)
-	local StyleKeyedItem = getKeyedItem(StyleItemLink)
+	local StyleKeyedItem = ddDataDaedra:getKeyedItem(StyleItemLink)
 	local StyleCost = 0
 	
 	if StyleKeyedItem and
@@ -1044,7 +1044,7 @@ function ddDataDaedra:creationSigil(self, tooltip)
 	end
 	
 	local TraitItemLink = GetSmithingTraitItemLink(TraitList.traitIndex, LINK_STYLE_BRACKETS)
-	local TraitKeyedItem = getKeyedItem(TraitItemLink)
+	local TraitKeyedItem = ddDataDaedra:getKeyedItem(TraitItemLink)
 	local TraitCost = 0
 	
 	if TraitKeyedItem and
@@ -1180,7 +1180,7 @@ end
 function ddDataDaedra:linkStatsToChat(itemLink)
 	if not itemLink or itemLink == "" then return end
 	itemLink = string.gsub(itemLink, "|H0", "|H1")
-	local KeyedItem = getKeyedItem(itemLink)
+	local KeyedItem = ddDataDaedra:getKeyedItem(itemLink)
 	local ChatEditControl = CHAT_SYSTEM.textEntry.editControl
 	
 	if not KeyedItem or
@@ -1212,7 +1212,7 @@ function ddDataDaedra:chatLinkStatsToChat(itemLink, button, control)
 			
 			elseif (button == 2 and 
 			itemLink ~= "") then				
-				if isKeyedItem(itemLink) then
+				if self:getKeyedItem(itemLink) then
 					AddMenuItem(GetString(SI_ITEM_ACTION_DD_STATS_TO_CHAT), function() self:linkStatsToChat(itemLink) end) 
 				end
 				
@@ -1238,7 +1238,7 @@ function ddDataDaedra:slotControlStatsToChat()
 	end
 	
 	local ItemLink = getItemLinkFromSlotControl(SlotControl)
-	if isKeyedItem(ItemLink) then
+	if self:getKeyedItem(ItemLink) then
 		zo_callLater(function() AddMenuItem(GetString(SI_ITEM_ACTION_DD_STATS_TO_CHAT), function() ddDataDaedra:linkStatsToChat(ItemLink) end, MENU_ADD_OPTION_LABEL); ShowMenu(self) end, 50)
 	end
 end
@@ -1418,7 +1418,7 @@ end
 
 function ddDataDaedra:twilightSummons()
 	local DATACAIRN = self.dataCairn
-	local scanInterval = self.dataCairn.codex.cInterval.getFunc()
+--	local scanInterval = self.dataCairn.codex.cInterval.getFunc()
 	local numGuilds = GetNumGuilds()
 	
 	if self.historyScan then

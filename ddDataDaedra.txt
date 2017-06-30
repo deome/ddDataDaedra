@@ -2,11 +2,11 @@
 ## The Elder Scrolls® and related logos are registered trademarks or trademarks of ZeniMax Media Inc. in the 
 ## United States and/or other countries. All rights reserved."
 
-## Interface: 2.0
+## Interface: 3.0
 ## Title: Deome's DataDaedra
 ## Description: DataDaedra recommends prices for most items based on recent sales data. Now part of Deome's Addon Suite.
 ## Author: D. Deome (@deome) - heydeome@gmail.com
-## APIVersion: 100014
+## APIVersion: 100019
 ## Version: @project-version@
 
 ## SavedVariables: ddDataCairn
